@@ -333,6 +333,18 @@ def edit_note():
     return glvars.ReturnMessage(True, edit_ticket_note["message"]).send("json")
 
 
+@orders_bp.route("/cancel", methods=["POST"])
+def cancel_order():
+    res = request.get_json()
+    order_id = res['code'][0]
+
+    cancel_res = order_man.cancel_cart(order_id)
+    if not cancel_res['success']:
+        return glvars.ReturnMessage(False, cancel_res['message']).send('json')
+    
+    return glvars.ReturnMessage(True, 'Cancelled Order').send('json')
+
+
 ############
 # USERS BP #
 ############

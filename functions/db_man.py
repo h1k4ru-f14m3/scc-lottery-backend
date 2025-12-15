@@ -6,6 +6,11 @@ class DBManager():
     def __init__(self, db_file_path=glvars.db_path):
         self.db_path = db_file_path
 
+
+    def get_conn(self):
+        return sqlite3.connect(self.db_path)
+
+
     # Params must be a tuple
     def execute_query(self, query, params=None):
         db_conn = sqlite3.connect(self.db_path)
@@ -13,7 +18,10 @@ class DBManager():
         # print('params= ', params)
         # query = str()
 
-        db_cur.execute(query, params or ())
+        parameters = params
+        if not isinstance(params, tuple) and not isinstance(params, type(None)):
+            parameters = tuple(params)
+        db_cur.execute(query, parameters or ())
 
         if query.strip().upper().startswith('SELECT'):
             return db_cur.fetchall()
@@ -22,8 +30,31 @@ class DBManager():
             return db_cur.lastrowid
         
 
-    def add_row(self, table, cols, values):
-        if not isinstance(cols, Iterable) or not isinstance(values, Iterable) or not isinstance(table, str) or len(cols) != len(values):
+    def exec_no_commit(self, query, params=None, conn=None):
+        if not isinstance(conn, sqlite3.Connection):
+            db_conn = sqlite3.connect(self.db_path)
+        else:
+            db_conn = conn
+        db_cur = db_conn.cursor()
+
+        parameters = params
+        if not isinstance(params, tuple) and not isinstance(params, None):
+            parameters = tuple(params)
+        db_cur.execute(query, parameters or ())
+
+        return glvars.ReturnData(True, 'OK! DONT FORGET TO COMMIT!', db_conn=db_conn).send()
+    
+
+    def commit(self, db_conn):
+        if not isinstance(db_conn, sqlite3.Connection):
+            return glvars.ReturnMessage(False, 'NOT A DB CONN!').send()
+        
+        db_conn.commit()
+        return glvars.ReturnMessage(True, 'COMMITTED!').send()
+        
+
+    def add_row(self, table, cols, values, db_conn):
+        if not isinstance(cols, Iterable) or not isinstance(values, Iterable) or not isinstance(table, str) or len(cols) != len(values) or not isinstance(db_conn, sqlite3.Connection):
             return glvars.ReturnMessage(False, 'Invalid Data').send()
             
         placeholders = ', '.join(['?'] * len(values))
@@ -33,29 +64,29 @@ class DBManager():
 
         query = f"INSERT INTO {table} ({col_string}) VALUES ({placeholders})"
         # print(query)
-        response = self.execute_query(query, tuple(values))
-        if response < 1:
-            return glvars.ReturnMessage(False, 'Something in the backend went wrong').send()
+        response = self.exec_no_commit(query, tuple(values), db_conn)
+        if not response['success']:
+            return glvars.ReturnMessage(False, f'Something in the backend went wrong: {response}').send()
         
         return glvars.ReturnData(True, 'Successfully added row', id_affected=response).send()
     
     
-    def delete_row(self, table, cols, values):
-        if not isinstance(cols, Iterable) or not isinstance(values, Iterable) or not isinstance(table, str) or len(cols) != len(values):
+    def delete_row(self, table, col, value, db_conn):
+        if not isinstance(col, str) or not isinstance(value, str) or not isinstance(table, str) or len(col) != 1 or len(value) != 1:
             return glvars.ReturnMessage(False, 'Invalid Data').send()
-            
-        placeholders = ', '.join(['?'] * len(values))
 
-        col_string = ', '.join(cols)
-
-
-        query = f"DELETE FROM {table} WHERE ({col_string}) = ({placeholders})"
-        response = self.execute_query(query, tuple(values))
+        query = f"DELETE FROM {table} WHERE {col} = ?"
+        response = self.exec_no_commit(query, tuple(value), db_conn)
         
-        return glvars.ReturnData(True, 'Successfully added row', id_affected=response).send()
+        return glvars.ReturnData(True, 'Successfully removed row', id_affected=response).send()
     
 
-    def edit_row(self, table, condition_cols, condition_values, edit_cols, edit_values):
+    def edit_row(self, table, condition_cols, condition_values, edit_cols, edit_values, conn=None):
+        if not isinstance(conn, sqlite3.Connection):
+            db_conn = sqlite3.connect(self.db_path)
+        else:
+            db_conn = conn
+
         if (not isinstance(table, str) 
             or not isinstance(condition_cols, Iterable) 
             or not isinstance(condition_values, Iterable) 
@@ -68,6 +99,6 @@ class DBManager():
         query = f'UPDATE {table} SET {edit_string} WHERE {condition_string}'
 
         all_params = edit_params + condition_params
-        self.execute_query(query, all_params)
+        self.exec_no_commit(query, all_params, db_conn)
         
         return glvars.ReturnMessage(True, 'Edited row(s)').send()

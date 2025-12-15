@@ -29,6 +29,7 @@ class OrderManager():
         user.import_from_dict(user_session)
 
         """Update tickets in db"""
+        db_conn = self.db_man.get_conn()
         if not ticket.is_available():
             # print('Ticket Data: ', ticket.to_dict())
             return glvars.ReturnMessage(False, 'Ticket already ordered!').send()
@@ -37,9 +38,14 @@ class OrderManager():
                                         ('code',), 
                                         (ticket_id,), 
                                         ('status', 'buyer_id', 'expire_at'), 
-                                        (ticket.status, ticket.buyer_id, ticket.expire_at))
+                                        (ticket.status, ticket.buyer_id, ticket.expire_at),
+                                        db_conn)
         if response['success'] == False:
             return glvars.ReturnMessage(False, response['message']).send()
+        
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, commit_res['message']).send()
 
         """Edit Cart Session"""
         cart = Cart()
@@ -66,6 +72,7 @@ class OrderManager():
         user.import_from_dict(user_session)
 
         """Update tickets in db"""
+        db_conn = self.db_man.get_conn()
         if ticket.is_available():
             return glvars.ReturnMessage(False, 'Ticket is available').send()
         ticket.remove_order()
@@ -73,9 +80,14 @@ class OrderManager():
                                         ('code',), 
                                         (ticket_id,), 
                                         ('status', 'buyer_id', 'expire_at'), 
-                                        (ticket.status, ticket.buyer_id, ticket.expire_at))
+                                        (ticket.status, ticket.buyer_id, ticket.expire_at),
+                                        db_conn)
         if response['success'] == False:
             return glvars.ReturnMessage(False, response['message']).send()
+        
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, commit_res['message']).send()
 
         """Edit Cart Session"""
         cart = Cart()
@@ -126,6 +138,8 @@ class OrderManager():
 
         cart.img_link = img_data
 
+        db_conn = self.db_man.get_conn()
+
         for item in cart.items:
             ticket_get = self.tickets_man.get_ticket(item)
             if not ticket_get['success']:
@@ -135,14 +149,15 @@ class OrderManager():
             ticket.purchase()
             ticket.add_note(user.name)
 
-            response = self.tickets_man.edit_ticket(ticket.code, ['status', 'buyer_id', 'expire_at', 'note_for'], [ticket.status, ticket.buyer_id, ticket.expire_at, ticket.note_for])
+            response = self.tickets_man.edit_ticket(ticket.code, ['status', 'buyer_id', 'expire_at', 'note_for'], [ticket.status, ticket.buyer_id, ticket.expire_at, ticket.note_for], db_conn)
             
             if response['success'] == False:
                 return glvars.ReturnMessage(False, response['message']).send()
 
             user.remove_set_item('tickets_ordered', ticket.code)
             user.add_set_item('tickets_bought', ticket.code)
-        
+        self.db_man.commit(db_conn)
+
         cart.turn_to_order()
         order_id = cart.id
         # SAVE TO DB
@@ -153,12 +168,12 @@ class OrderManager():
 
 
     def confirm_cart(self, order_id):
-
         order = Cart()
         order_res_query = f'SELECT * FROM {glvars.orders_table} WHERE id = ?'
         order_res = self.db_man.execute_query(order_res_query, (order_id,))
         order.import_from_db(order_res[0])
 
+        db_conn = self.db_man.get_conn()
         for item in order.items:
             # print('Ticket Code: ', item)
             ticket_get = self.tickets_man.get_ticket(item)
@@ -174,7 +189,8 @@ class OrderManager():
                                             ('status',
                                              'expire_at'),
                                              (ticket.status,
-                                              ticket.expire_at))
+                                              ticket.expire_at),
+                                              db_conn)
             
             if response['success'] == False:
                 return glvars.ReturnMessage(False, response['message']).send()
@@ -183,13 +199,51 @@ class OrderManager():
                                          ('id',),
                                          (order_id,),
                                          ('confirmed',),
-                                         (1,))
+                                         (1,),
+                                         db_conn)
         if cart_edit['success'] == False:
             return glvars.ReturnMessage(False, cart_edit['message']).send()
+        
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, commit_res['message']).send()
         
         return glvars.ReturnMessage(True, 'Order confirmed to be bought!').send()
 
 
+    def cancel_cart(self, order_id):
+        order = Cart()
+        order_res_query = f'SELECT * FROM {glvars.orders_table} WHERE id = ?'
+        order_res = self.db_man.execute_query(order_res_query, (order_id,))
+        order.import_from_db(order_res[0])
+
+        db_conn = self.db_man.get_conn()
+
+        for item in order.items:
+            ticket_get = self.tickets_man.get_ticket(item)
+            if not ticket_get['success']:
+                return glvars.ReturnMessage(False, ticket_get['message']).send()
+            ticket = ticket_get['data']
+
+            ticket.reset()
+            response = self.db_man.edit_row(
+                                            glvars.tickets_table, 
+                                            ('code',), 
+                                            (ticket.code,), 
+                                            ('status', 'expire_at', 'buyer_id', 'note_for'), 
+                                            (ticket.status, ticket.expire_at, ticket.buyer_id, ticket.note_for),
+                                            db_conn)
+            if not response['success']:
+                return glvars.ReturnMessage(False, 'Something went wrong editing to reset in the database.').send()
+            
+        order_del = self.db_man.delete_row(glvars.orders_table, ('id',), (order.id,), db_conn)
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, f'Could not cancel the order: {commit_res['message']}').send()
+        if not order_del['success']:
+            return glvars.ReturnMessage(False, f'Could not cancel the order: {order_del['message']}').send()
+        
+        return glvars.ReturnMessage(True, 'Order cancelled!').send()
 
 
     def save_to_db(self, user_session, cart_session):
@@ -197,11 +251,13 @@ class OrderManager():
         user = User()
         user.import_from_dict(user_session)
         user_dict = user.to_dict()
+        db_conn = self.db_man.get_conn()
 
         response = self.db_man.edit_row(glvars.users_table, ('id',), 
                                         (user.id,), 
                                         ('tickets_bought', 'tickets_ordered'), 
-                                        (user_dict['tickets_bought'], user_dict['tickets_ordered']))
+                                        (user_dict['tickets_bought'], user_dict['tickets_ordered']),
+                                        db_conn)
         if response['success'] == False:
             return glvars.ReturnMessage(False, response['message']).send()
 
@@ -217,9 +273,14 @@ class OrderManager():
                                          cart_dict['amount_bought'], 
                                          cart_dict['tickets_bought'], 
                                          cart_dict['img_link'], 
-                                         cart_dict['is_in_cart']))
+                                         cart_dict['is_in_cart']),
+                                         db_conn)
         if response['success'] == False:
             return glvars.ReturnMessage(False, response['message']).send()
+        
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, commit_res['message']).send()
         
         return glvars.ReturnMessage(True, 'Successfully saved to the database').send()
             
