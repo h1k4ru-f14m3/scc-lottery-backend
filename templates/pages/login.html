@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block main %}
+<div class="header"></div>
+<form action="/login" method="post" class="login-container">
+    <h1>Login</h1>
+    
+    <p>{{ message }}</p>
+    
+    <label for="username">Username:</label> 
+    <input type="text" placeholder="Username" name="username" required>
+    <label for="password">Password:</label>
+    <input type="password" placeholder="Password" name="password" required> 
+    <input type="button" value="Login" id="login-btn">
+</form>
+
+<script type="module">
+    import { runFlaskRoute, listenEnter } from "{{ url_for('static', filename='functions.js') }}";
+
+    let loginBTN = document.querySelector("#login-btn");
+
+    loginBTN.addEventListener('click', function() {
+        runFlaskRoute('/login', '.login-container', '.login-container p');
+    });
+
+    listenEnter('.login-container', '#login-btn');
+</script>
+{% endblock %}

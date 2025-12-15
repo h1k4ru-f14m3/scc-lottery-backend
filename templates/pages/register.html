@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block main %}
+<div class="header"></div>
+<form action="/register" method="post" class="login-container">
+    <h1>Register</h1>
+
+    <p>{{ message }}</p>
+
+    <label for="email">Email:</label>
+    <input type="text" placeholder="Email" name="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
+
+    <label for="username">Username:</label> 
+    <input type="text" placeholder="Username" name="username" required>
+
+    <label for="password">Password:</label>
+    <input type="password" placeholder="Password" name="password" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required>
+
+    <label for="conpassword">Confirm Password:</label>
+    <input type="password" placeholder="Confirm Password" name="conpassword" required> 
+
+    <input type="button" value="Register" id="login-btn">
+</form>
+
+<script type="module">
+    import { runFlaskRoute, listenEnter } from "{{ url_for('static', filename='functions.js') }}";
+
+    let loginBTN = document.querySelector("#login-btn");
+
+    loginBTN.addEventListener('click', function() {
+        runFlaskRoute('/register', '.login-container', '.login-container p');
+    });
+
+    listenEnter('.login-container', '#login-btn');
+</script>
+{% endblock %}
