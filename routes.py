@@ -85,9 +85,9 @@ def index():
     )
 
 
-@app.route("/update")
+@app.route("/version")
 def update():
-    return glvars.ReturnMessage(True, "Backend is updated! v.0.1.1").send("json")
+    return glvars.ReturnMessage(True, "Backend: v.0.2").send("json")
 
 
 @app.route("/search")
