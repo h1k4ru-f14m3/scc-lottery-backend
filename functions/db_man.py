@@ -24,8 +24,8 @@ class DBManager():
 
         try:
             db_cur.execute(query, parameters or ())
-        except sqlite3.DatabaseError:
-            return 0
+        except sqlite3.DatabaseError as e:
+            return e
 
         if query.strip().upper().startswith('SELECT'):
             return db_cur.fetchall()
@@ -50,7 +50,7 @@ class DBManager():
         except sqlite3.DatabaseError:
             return glvars.ReturnMessage(False, 'No such column').send()
 
-        return glvars.ReturnData(True, 'OK! DONT FORGET TO COMMIT!', db_conn=db_conn).send()
+        return glvars.ReturnData(True, 'OK! DONT FORGET TO COMMIT!', db_conn=db_conn, id_affected=db_cur.lastrowid).send()
     
 
     def commit(self, db_conn):
@@ -76,7 +76,7 @@ class DBManager():
         if not response['success']:
             return glvars.ReturnMessage(False, f'Something in the backend went wrong: {response}').send()
         
-        return glvars.ReturnData(True, 'Successfully added row', id_affected=response).send()
+        return glvars.ReturnData(True, 'Successfully added row', id_affected=response['id_affected']).send()
     
     
     def delete_row(self, table, col, value, db_conn):

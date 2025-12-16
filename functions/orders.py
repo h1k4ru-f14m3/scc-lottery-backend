@@ -297,15 +297,19 @@ class OrderManager():
 
         db_conn = self.db_man.get_conn()
         response = self.db_man.add_row(glvars.orders_table, ('buyer_id',), (user.id,), db_conn)
-        # print(response)
-        cart = Cart(response['id_affected'], user.id)
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
-            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')  
+            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
+
+        cart = Cart(response['id_affected'], user.id)
 
         query = f'SELECT id, buyer_id, amount_bought, tickets_bought, img_link, is_in_cart FROM {glvars.orders_table} WHERE id = ?'
         response = self.db_man.execute_query(query, (cart.id,))
+        print('SUPPOSED PARAM', (cart.id,))
+        print('TYPE_PARAM', type(cart.id,))
+        print('RESPONSE:', response)
         cart.import_from_db(response[0])
+
         # print(response[0])
         
         return glvars.ReturnData(True, 'Created new cart', cart=cart.to_dict()).send()
