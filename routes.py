@@ -350,13 +350,19 @@ def cancel_order():
 ############
 @users_bp.route("/")
 def get_users():
-    query = f"SELECT id, name, role, tickets_ordered, tickets_bought, phone_number, email, address FROM {glvars.users_table}"
-    res = db_man.execute_query(query)
+    offset = request.args.get('offset') or 0
+    q = request.args.get('q') or None
+    search_for = request.args.get('type') or 'id'
+
+    res = users_man.get_users(limit=15, offset=offset, q=q, search_for=search_for)
+
+    if not res['success']:
+        return glvars.ReturnMessage(False, "Something went wrong with the database! **users**").send('json')
 
     main_data = []
     personal_info = []
 
-    for row in res:
+    for row in res['data']:
         main_data.append([row[0], row[1], row[2]])
         personal_info.append([row[3], row[4], row[5], row[6], row[7]])
 
@@ -445,7 +451,7 @@ def del_user():
     return glvars.ReturnMessage(True, "Deleted user!").send("json")
 
 
-@users_bp.route("edit_user")
+@users_bp.route("/edit_user", methods=['POST'])
 def edit_user():
     data = request.get_json()
     user_import = users_man.get_user(data["id"])
@@ -455,6 +461,8 @@ def edit_user():
     user = user_import["data"]
 
     filtered_data = {k: v for k, v in data.items() if k != "id"}
+    if not filtered_data:
+        return glvars.ReturnMessage(False, 'No params provided').send('json')
 
     db_conn = db_man.get_conn()
     user_edit = users_man.edit_user(user.id, filtered_data.keys, filtered_data.values, db_conn)
@@ -465,7 +473,7 @@ def edit_user():
     if not commit_res['success']:
         return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
 
-    return glvars.ReturnData(True, "Edited ticket!", data=user.to_dict()).send("json")
+    return glvars.ReturnData(True, "Edited user!", data=user.to_dict()).send("json")
 
 
 ##############
@@ -504,26 +512,57 @@ def get_ticket():
 
 @tickets_bp.route("/add_ticket", methods=["POST"])
 def add_ticket():
+    db_conn = db_man.get_conn()
+
     data = request.get_json()
     code = data["code"] or None
     if not code:
         return glvars.ReturnMessage(False, "No code provided").send("json")
+    
+    codes = str(code).strip().split(';')
+    print(f'LENGTH CODES: {len(codes)}')
+    print(f'CODE: {code}')
+    print(f'CODES: {codes}')
+    # if len(codes) == 0 and code:
+    #     codes = [code]
 
-    db_conn = db_man.get_conn()
-    res = tickets_man.add_ticket(code, db_conn)
-    if not res["success"]:
-        return glvars.ReturnMessage(False, f"Something in the tickets went wrong: {res['message']}").send("json")
+    new_codes = list()
+
+    for c in codes:
+        c_mod = str(c).split('-')
+
+        if len(c_mod) == 2:
+            if int(c_mod[0]) > int(c_mod[1]):
+                c_mod = [c_mod[1], c_mod[0]]
+
+            for j in range(int(c_mod[0]), int(c_mod[1]) + 1):
+                new_codes.append(str(j))
+                res = tickets_man.add_ticket(str(j), db_conn)
+                if not res["success"]:
+                    print(f'FAILURE! {res['message']}')
+                    continue
+
+        elif len(c_mod) == 1:
+            new_codes.append(str(c_mod[0]))
+            res = tickets_man.add_ticket(str(c_mod[0]), db_conn)
+            if not res["success"]:
+                print(f'FAILURE! {res['message']}')
+                continue
+            
+
+    print(f"NEW CODES: {new_codes}")
     
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
         return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
-    return glvars.ReturnMessage(True, "Added ticket!").send("json")
+    return glvars.ReturnData(True, "Added ticket(s)!", added_tickets=new_codes).send("json")
 
 
 @tickets_bp.route("/del_ticket", methods=["POST"])
 def del_ticket():
     data = request.get_json()
+    print(f'DATA: {data}')
     code = data["code"] or None
     if not code:
         return glvars.ReturnMessage(False, "No code provided").send("json")
@@ -538,6 +577,8 @@ def del_ticket():
 
 @tickets_bp.route("/edit_ticket", methods=["POST"])
 def edit_ticket():
+    db_conn = db_man.get_conn()
+
     data = request.get_json()
     ticket_import = tickets_man.get_ticket(data["code"])
     if not ticket_import["success"]:
@@ -545,14 +586,19 @@ def edit_ticket():
 
     ticket = ticket_import["data"]
 
-    filtered_data = {k: v for k, v in data.items() if k != "code" or k != "changecode"}
-    if data["changecode"] == "true":
-        filtered_data = data
+    filtered_data = {k: v for k, v in data.items() if k != "code"}
+    if not filtered_data:
+        return glvars.ReturnMessage(False, 'No params provided').send('json')
+
 
     if not ticket or not ticket.is_available():
         return glvars.ReturnMessage(False, "Not Allowed!").send("json")
 
-    tickets_man.edit_ticket(ticket.code, filtered_data.keys, filtered_data.values)
+    tickets_man.edit_ticket(ticket.code, filtered_data.keys, filtered_data.values, db_conn)
+
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
     return glvars.ReturnData(True, "Edited ticket!", data=ticket.to_dict()).send("json")
 

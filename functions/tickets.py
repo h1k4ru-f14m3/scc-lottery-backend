@@ -167,16 +167,8 @@ class TicketsManager:
         if isinstance(db_conn, type(None)):
             return glvars.ReturnMessage(False, 'Invalid db conn for edit_ticket!').send()
 
-        if not code or not edit_vars or not edit_values or not isinstance(edit_values, list) or not isinstance(edit_values, list) or len(edit_values) != len(edit_vars):
+        if not code or not edit_vars or not edit_values or not isinstance(edit_values, list) or not isinstance(edit_vars, list) or len(edit_values) != len(edit_vars):
             return glvars.ReturnMessage(False, 'No code provided or invalid datatypes or data lengths do not match!').send()
-        
-        ticket = self.get_ticket(code)['data']
-        
-        try:
-            for i, var in enumerate(edit_vars):
-                setattr(ticket, var, edit_values[i])
-        except Exception:
-            return glvars.ReturnMessage(False, 'Something went wrong in edit tickets!').send()
         
         edit_res = self.db_man.edit_row(glvars.tickets_table, ('code',), (code,), edit_vars, edit_values, db_conn)
 
@@ -191,15 +183,14 @@ class TicketsManager:
             return glvars.ReturnMessage(False, 'No code provided!').send()
 
         db_conn = self.db_man.get_conn()
-        res = self.db_man.delete_row(glvars.tickets_table, ('code',), (code,), db_conn)
+        res = self.db_man.delete_row(glvars.tickets_table, 'code', code, db_conn)
+
+        if not res['success']:
+            return glvars.ReturnMessage(False, f"Reason cannot delete ticket: {res['message']}").send()
         
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
             return glvars.ReturnMessage(False, f"Reason cannot delete ticket: {commit_res['message']}").send()
-
-
-        if not res['success']:
-            return glvars.ReturnMessage(False, f"Reason cannot delete ticket: {res['message']}").send()
         
         return glvars.ReturnMessage(True, 'Successfully deleted ticket!').send()
 

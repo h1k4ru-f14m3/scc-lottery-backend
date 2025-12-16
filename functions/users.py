@@ -227,7 +227,20 @@ class Authentication():
 class UserManager():
     def __init__(self, db_man):
         self.db_man = db_man
-        
+
+
+    def get_users(self, limit=10, offset=0, q=None, search_for='id'):
+        params = str()
+        query = f"SELECT id, name, role, tickets_ordered, tickets_bought, phone_number, email, address FROM {glvars.users_table} LIMIT {limit} OFFSET {offset}"
+
+        if q:
+            params = f'%{q}%'
+            query = f"SELECT id, name, role, tickets_ordered, tickets_bought, phone_number, email, address FROM {glvars.users_table} WHERE {search_for} LIKE ? LIMIT {limit} OFFSET {offset}"
+            res = self.db_man.execute_query(query, (params,))
+        else:
+            res = self.db_man.execute_query(query)
+
+        return glvars.ReturnData(True, "Here's the users!", data=res).send()
 
     def get_user(self, id):
         user = User()
@@ -262,27 +275,17 @@ class UserManager():
         return glvars.ReturnData(True, 'Added user!').send()
     
 
-    def edit_user(self, id, edit_vars, edit_values, db_conn=None):
+    def edit_user(self, u_id, edit_vars, edit_values, db_conn=None):
         if isinstance(db_conn, type(None)):
             return glvars.ReturnMessage(False, 'Invalid db conn for edit_user').send()
 
-        if not isinstance(edit_vars, list) or not isinstance(edit_values, list):
+        if not isinstance(edit_vars, Iterable) or not isinstance(edit_values, Iterable):
             return glvars.ReturnMessage(False, 'The two variables must be lists!').send()
         
         if len(edit_vars) != len(edit_values):
             return glvars.ReturnMessage(False, 'The two lists must be the same in size').send()
         
-        user_fetch = self.get_user(id)
-        if not user_fetch['success']:
-            return glvars.ReturnMessage(False, user_fetch['message']).send()
-        
-        user = user_fetch['data']
-        set_vars_res = user.set_vars(edit_vars, edit_values)
-        if not set_vars_res['success']:
-            return glvars.ReturnMessage(False, set_vars_res['message']).send()
-        
-        to_edit = user.to_dict().pop('id')
-        edit_res = self.db_man.edit_row(glvars.users_table, ('id',), (user.id,), to_edit.keys, to_edit.values, db_conn)
+        edit_res = self.db_man.edit_row(glvars.users_table, ('id',), (u_id,), edit_vars, edit_values, db_conn)
 
         if not edit_res['success']:
             return glvars.ReturnMessage(False, edit_res['message']).send()

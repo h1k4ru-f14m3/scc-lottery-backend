@@ -21,7 +21,11 @@ class DBManager():
         parameters = params
         if not isinstance(params, tuple) and not isinstance(params, type(None)):
             parameters = tuple(params)
-        db_cur.execute(query, parameters or ())
+
+        try:
+            db_cur.execute(query, parameters or ())
+        except sqlite3.DatabaseError:
+            return 0
 
         if query.strip().upper().startswith('SELECT'):
             return db_cur.fetchall()
@@ -40,7 +44,11 @@ class DBManager():
         parameters = params
         if not isinstance(params, tuple) and not isinstance(params, None):
             parameters = tuple(params)
-        db_cur.execute(query, parameters or ())
+
+        try:
+            db_cur.execute(query, parameters or ())
+        except sqlite3.DatabaseError:
+            return glvars.ReturnMessage(False, 'No such column').send()
 
         return glvars.ReturnData(True, 'OK! DONT FORGET TO COMMIT!', db_conn=db_conn).send()
     
@@ -72,11 +80,11 @@ class DBManager():
     
     
     def delete_row(self, table, col, value, db_conn):
-        if not isinstance(col, str) or not isinstance(value, str) or not isinstance(table, str) or len(col) != 1 or len(value) != 1:
+        if not isinstance(col, str) or not isinstance(value, str) or not isinstance(table, str):
             return glvars.ReturnMessage(False, 'Invalid Data').send()
 
         query = f"DELETE FROM {table} WHERE {col} = ?"
-        response = self.exec_no_commit(query, tuple(value), db_conn)
+        response = self.exec_no_commit(query, (value,), db_conn)
         
         return glvars.ReturnData(True, 'Successfully removed row', id_affected=response).send()
     
