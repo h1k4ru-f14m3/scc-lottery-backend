@@ -87,7 +87,7 @@ def index():
 
 @app.route("/version")
 def version():
-    return glvars.ReturnMessage(True, "Backend: v.0.2.1").send("json")
+    return glvars.ReturnMessage(True, "Backend: v.0.2.1").response()
 
 
 @app.route("/search")
@@ -98,7 +98,7 @@ def search():
     query = f"SELECT * FROM {glvars.tickets_table} WHERE status = 'available' AND code LIKE ? LIMIT 28 OFFSET ?"
 
     res = db_man.execute_query(query, (q, offset))
-    return glvars.ReturnData(True, "OK!", data=res).send("json")
+    return glvars.ReturnData(True, "OK!", data=res).response()
 
 
 @app.route("/bought_data")
@@ -111,9 +111,9 @@ def get_bought_data():
 
     res = db_man.execute_query(query, params)
     if len(res) == 0:
-        return glvars.ReturnMessage(False, "Not found!").send("json")
+        return glvars.ReturnMessage(False, "Not found!").response()
 
-    return glvars.ReturnData(True, "Found!", data=res).send("json")
+    return glvars.ReturnData(True, "Found!", data=res).response()
 
 
 @app.route("/register", methods=["POST"])
@@ -131,22 +131,22 @@ def login():
 @app.route("/logout")
 def logout():
     session.clear()
-    return glvars.ReturnMessage(True, "Logged out!").send("json")
+    return glvars.ReturnMessage(True, "Logged out!").response()
 
 
 @app.route("/load_user")
 def load_user():
     if not session.get("user_info"):
-        return glvars.ReturnMessage(False, "User not logged in!").send("json")
-    return glvars.ReturnData(True, "Ok!", user=session.get("user_info")).send("json")
+        return glvars.ReturnMessage(False, "User not logged in!").response()
+    return glvars.ReturnData(True, "Ok!", user=session.get("user_info")).response()
 
 
 @app.route("/is_admin")
 def is_admin():
     if not session.get("user_info") or session.get("user_info")["role"] != "admin":
-        return glvars.ReturnMessage(False, "You are not an admin!").send("json")
+        return glvars.ReturnMessage(False, "You are not an admin!").response()
 
-    return glvars.ReturnMessage(True, "You are an admin!").send("json")
+    return glvars.ReturnMessage(True, "You are an admin!").response()
 
 
 ###############
@@ -156,23 +156,25 @@ def is_admin():
 def cart():
     if not session.get("cart"):
         results = order_man.create_cart(session.get("user_info"))
+        if not results['success']:
+            return glvars.ReturnMessage(False, f"Something went wrong in making a cart: {results['message']}").response()
         session["cart"] = results["cart"]
 
     if not session.get("user_info"):
-        return glvars.ReturnMessage(False, "Log in first").send("json")
+        return glvars.ReturnMessage(False, "Log in first").response()
 
     return glvars.ReturnData(
         True,
         "Cart Data is here",
         data=session.get("cart"),
         user=session.get("user_info"),
-    ).send("json")
+    ).response()
 
 
 @cart_bp.route("/add", methods=["POST"])
 def add_to_cart():
     if not session.get("user_info"):
-        return glvars.ReturnMessage(False, "Login first").send("json")
+        return glvars.ReturnMessage(False, "Login first").response()
 
     if not session.get("cart"):
         results = order_man.create_cart(session.get("user_info"))
@@ -187,21 +189,21 @@ def add_to_cart():
     print(response)
 
     if not response["success"]:
-        return glvars.ReturnData(False, response["message"]).send("json")
+        return glvars.ReturnData(False, response["message"]).response()
 
     session["user_info"] = response["user"]
     session["cart"] = response["cart"]
 
-    return glvars.ReturnData(True, "Added to cart").send("json")
+    return glvars.ReturnData(True, "Added to cart").response()
 
 
 @cart_bp.route("/remove", methods=["POST"])
 def remove_from_cart():
     if not session.get("user_info"):
-        return glvars.ReturnMessage(False, "Login first").send("json")
+        return glvars.ReturnMessage(False, "Login first").response()
 
     if not session.get("cart"):
-        return glvars.ReturnMessage(False, "No Cart!").send("json")
+        return glvars.ReturnMessage(False, "No Cart!").response()
 
     data = request.get_json()
     ticket_code = data.get("code")
@@ -210,12 +212,12 @@ def remove_from_cart():
     )
 
     if not response["success"]:
-        return glvars.ReturnData(False, response["message"]).send("json")
+        return glvars.ReturnData(False, response["message"]).response()
 
     session["user_info"] = response["user"]
     session["cart"] = response["cart"]
 
-    return glvars.ReturnData(True, "Added to cart").send("json")
+    return glvars.ReturnData(True, "Added to cart").response()
 
 
 @cart_bp.route("/confirm", methods=["POST"])
@@ -233,18 +235,18 @@ def confirm_cart():
     )
 
     if not res["success"]:
-        return glvars.ReturnMessage(False, res["message"]).send("json")
+        return glvars.ReturnMessage(False, res["message"]).response()
 
     session["cart"] = res["cart"]
     session["user_info"] = res["user"]
 
     if session['user_info']['role'] == 'admin' or session['user_info']['role'] == 'agent':
         if not order_man.confirm_cart(res['order_id'])['success']:
-            return glvars.ReturnMessage(False, 'Something went wrong confirming the tickets').send('json')
+            return glvars.ReturnMessage(False, 'Something went wrong confirming the tickets').response()
 
     print(f'SESSION ROLE: {session['user_info']['role']}')
 
-    return glvars.ReturnMessage(True, res["message"]).send("json")
+    return glvars.ReturnMessage(True, res["message"]).response()
 
 
 #######################
@@ -267,7 +269,7 @@ def load_orders():
 
     return glvars.ReturnData(
         True, "Orders Data", orders=orders, img_data=img_data
-    ).send("json")
+    ).response()
 
 
 @orders_bp.route("/load_all")
@@ -285,7 +287,7 @@ def load_all():
 
     return glvars.ReturnData(
         True, "Orders Data", orders=orders, img_data=img_data
-    ).send("json")
+    ).response()
 
 
 @orders_bp.route("/load_img", methods=["POST"])
@@ -298,7 +300,7 @@ def load_img():
     try:
         img_data = res[0]
     except IndexError:
-        return glvars.ReturnMessage(False, "Index Error in Load Image").send("json")
+        return glvars.ReturnMessage(False, "Index Error in Load Image").response()
     print(img_data)
 
     return glvars.ReturnData(True, f"Image Data of {img_id}", img_data=img_data).send(
@@ -315,9 +317,9 @@ def confirm_order():
 
     confirm_res = order_man.confirm_cart(order_id)
     if not confirm_res["success"]:
-        return glvars.ReturnMessage(False, "Order not confirmed!").send("json")
+        return glvars.ReturnMessage(False, "Order not confirmed!").response()
 
-    return glvars.ReturnMessage(True, "Confirmed order").send("json")
+    return glvars.ReturnMessage(True, "Confirmed order").response()
 
 
 @orders_bp.route("/edit_note", methods=["POST"])
@@ -328,9 +330,9 @@ def edit_note():
 
     edit_ticket_note = order_man.edit_note(note, ticket_code)
     if not edit_ticket_note["success"]:
-        return glvars.ReturnMessage(False, edit_ticket_note["message"]).send("json")
+        return glvars.ReturnMessage(False, edit_ticket_note["message"]).response()
 
-    return glvars.ReturnMessage(True, edit_ticket_note["message"]).send("json")
+    return glvars.ReturnMessage(True, edit_ticket_note["message"]).response()
 
 
 @orders_bp.route("/cancel", methods=["POST"])
@@ -340,9 +342,9 @@ def cancel_order():
 
     cancel_res = order_man.cancel_cart(order_id)
     if not cancel_res['success']:
-        return glvars.ReturnMessage(False, cancel_res['message']).send('json')
+        return glvars.ReturnMessage(False, cancel_res['message']).response()
     
-    return glvars.ReturnMessage(True, 'Cancelled Order').send('json')
+    return glvars.ReturnMessage(True, 'Cancelled Order').response()
 
 
 ############
@@ -357,7 +359,7 @@ def get_users():
     res = users_man.get_users(limit=15, offset=offset, q=q, search_for=search_for)
 
     if not res['success']:
-        return glvars.ReturnMessage(False, "Something went wrong with the database! **users**").send('json')
+        return glvars.ReturnMessage(False, "Something went wrong with the database! **users**").response()
 
     main_data = []
     personal_info = []
@@ -368,7 +370,7 @@ def get_users():
 
     return glvars.ReturnData(
         True, "Fetched user data", data=main_data, personal_info=personal_info
-    ).send("json")
+    ).response()
 
 
 @users_bp.route("/set_role", methods=["POST"])
@@ -376,7 +378,7 @@ def set_role():
     data = request.get_json()
     print(data)
     if not data["role"]:
-        return glvars.ReturnMessage(False, "Select a role!").send("json")
+        return glvars.ReturnMessage(False, "Select a role!").response()
 
     user_data = users_man.get_user(data["id"])
     user = user_data["data"]
@@ -391,13 +393,13 @@ def set_role():
     )
 
     if not usr_edit["success"]:
-        return glvars.ReturnMessage(False, usr_edit["message"]).send("json")
+        return glvars.ReturnMessage(False, usr_edit["message"]).response()
 
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').response()
 
-    return glvars.ReturnMessage(True, f"Role set to {data['role']}").send("json")
+    return glvars.ReturnMessage(True, f"Role set to {data['role']}").response()
 
 
 @users_bp.route("/get_user", methods=["POST"])
@@ -405,15 +407,15 @@ def get_user():
     data = request.get_json()
     q = data["id"]
     if not q:
-        return glvars.ReturnMessage(False, "No User ID provided!").send("json")
+        return glvars.ReturnMessage(False, "No User ID provided!").response()
 
     user_import = users_man.get_user(q)
     if not user_import["success"]:
-        return glvars.ReturnMessage(False, "User not found!").send("json")
+        return glvars.ReturnMessage(False, "User not found!").response()
 
     user = user_import["data"]
 
-    return glvars.ReturnData(True, f"Here's user {q}", data=user.to_dict()).send("json")
+    return glvars.ReturnData(True, f"Here's user {q}", data=user.to_dict()).response()
 
 
 @users_bp.route("/add_user", methods=["POST"])
@@ -424,31 +426,31 @@ def add_user():
     u_password = data["password"]
 
     if None in [u_name, u_phone_number, u_password]:
-        return glvars.ReturnMessage(False, "Insufficient data!").send("json")
+        return glvars.ReturnMessage(False, "Insufficient data!").response()
 
     db_conn = db_man.get_conn()
     u_add = users_man.add_user(u_name, u_phone_number, u_password, db_conn)
     if not u_add["success"]:
-        return glvars.ReturnMessage(False, u_add["message"]).send("json")
+        return glvars.ReturnMessage(False, u_add["message"]).response()
     
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').response()
 
-    return glvars.ReturnMessage(True, "Added User!").send("json")
+    return glvars.ReturnMessage(True, "Added User!").response()
 
 
 @users_bp.route("/del_user")
 def del_user():
     u_id = request.args.get("id")
     if not u_id:
-        return glvars.ReturnMessage(False, "Insufficient data!").send("json")
+        return glvars.ReturnMessage(False, "Insufficient data!").response()
 
     u_del = users_man.delete_user(u_id)
     if not u_del["success"]:
-        return glvars.ReturnMessage(False, u_del["message"]).send("json")
+        return glvars.ReturnMessage(False, u_del["message"]).response()
 
-    return glvars.ReturnMessage(True, "Deleted user!").send("json")
+    return glvars.ReturnMessage(True, "Deleted user!").response()
 
 
 @users_bp.route("/edit_user", methods=['POST'])
@@ -456,24 +458,24 @@ def edit_user():
     data = request.get_json()
     user_import = users_man.get_user(data["id"])
     if not user_import["success"]:
-        return glvars.ReturnMessage(False, user_import["message"]).send("json")
+        return glvars.ReturnMessage(False, user_import["message"]).response()
 
     user = user_import["data"]
 
     filtered_data = {k: v for k, v in data.items() if k != "id"}
     if not filtered_data:
-        return glvars.ReturnMessage(False, 'No params provided').send('json')
+        return glvars.ReturnMessage(False, 'No params provided').response()
 
     db_conn = db_man.get_conn()
     user_edit = users_man.edit_user(user.id, filtered_data.keys, filtered_data.values, db_conn)
     if not user_edit["success"]:
-        return glvars.ReturnMessage(False, user_edit["message"]).send("json")
+        return glvars.ReturnMessage(False, user_edit["message"]).response()
     
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
+        return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').response()
 
-    return glvars.ReturnData(True, "Edited user!", data=user.to_dict()).send("json")
+    return glvars.ReturnData(True, "Edited user!", data=user.to_dict()).response()
 
 
 ##############
@@ -490,11 +492,11 @@ def get_tickets():
     if not res["success"]:
         return glvars.ReturnMessage(
             False, "Something went wrong with the database! **tickets**"
-        ).send("json")
+        ).response()
     
     print(f'RES: {res}')
 
-    return glvars.ReturnData(True, res["message"], data=res["data"]).send("json")
+    return glvars.ReturnData(True, res["message"], data=res["data"]).response()
 
 
 @tickets_bp.route("/get_ticket")
@@ -503,11 +505,11 @@ def get_ticket():
     q = data["code"] or None
     ticket_import = tickets_man.get_ticket(code=q)
     if not ticket_import["success"]:
-        return glvars.ReturnMessage(False, ticket_import["message"]).send("json")
+        return glvars.ReturnMessage(False, ticket_import["message"]).response()
 
     ticket = ticket_import["data"]
 
-    return glvars.ReturnData(True, "Some ticket...", data=ticket.to_dict()).send("json")
+    return glvars.ReturnData(True, "Some ticket...", data=ticket.to_dict()).response()
 
 
 @tickets_bp.route("/add_ticket", methods=["POST"])
@@ -517,7 +519,7 @@ def add_ticket():
     data = request.get_json()
     code = data["code"] or None
     if not code:
-        return glvars.ReturnMessage(False, "No code provided").send("json")
+        return glvars.ReturnMessage(False, "No code provided").response()
     
     codes = str(code).strip().split(';')
     print(f'LENGTH CODES: {len(codes)}')
@@ -556,7 +558,7 @@ def add_ticket():
     if not commit_res['success']:
         return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
-    return glvars.ReturnData(True, "Added ticket(s)!", added_tickets=new_codes).send("json")
+    return glvars.ReturnData(True, "Added ticket(s)!", added_tickets=new_codes).response()
 
 
 @tickets_bp.route("/del_ticket", methods=["POST"])
@@ -565,14 +567,14 @@ def del_ticket():
     print(f'DATA: {data}')
     code = data["code"] or None
     if not code:
-        return glvars.ReturnMessage(False, "No code provided").send("json")
+        return glvars.ReturnMessage(False, "No code provided").response()
 
     res = tickets_man.delete_ticket(code)
     if not res["success"]:
         return glvars.ReturnMessage(
             False, f"Something in the tickets went wrong: {res['message']}"
-        ).send("json")
-    return glvars.ReturnMessage(True, "Deleted ticket!").send("json")
+        ).response()
+    return glvars.ReturnMessage(True, "Deleted ticket!").response()
 
 
 @tickets_bp.route("/edit_ticket", methods=["POST"])
@@ -582,17 +584,17 @@ def edit_ticket():
     data = request.get_json()
     ticket_import = tickets_man.get_ticket(data["code"])
     if not ticket_import["success"]:
-        return glvars.ReturnMessage(False, ticket_import["message"]).send("json")
+        return glvars.ReturnMessage(False, ticket_import["message"]).response()
 
     ticket = ticket_import["data"]
 
     filtered_data = {k: v for k, v in data.items() if k != "code"}
     if not filtered_data:
-        return glvars.ReturnMessage(False, 'No params provided').send('json')
+        return glvars.ReturnMessage(False, 'No params provided').response()
 
 
     if not ticket or not ticket.is_available():
-        return glvars.ReturnMessage(False, "Not Allowed!").send("json")
+        return glvars.ReturnMessage(False, "Not Allowed!").response()
 
     tickets_man.edit_ticket(ticket.code, filtered_data.keys, filtered_data.values, db_conn)
 
@@ -600,7 +602,7 @@ def edit_ticket():
     if not commit_res['success']:
         return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
-    return glvars.ReturnData(True, "Edited ticket!", data=ticket.to_dict()).send("json")
+    return glvars.ReturnData(True, "Edited ticket!", data=ticket.to_dict()).response()
 
 
 app.register_blueprint(cart_bp)

@@ -299,7 +299,7 @@ class OrderManager():
         response = self.db_man.add_row(glvars.orders_table, ('buyer_id',), (user.id,), db_conn)
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
-            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
+            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send()
 
         cart = Cart(response['id_affected'], user.id)
 
@@ -334,7 +334,7 @@ class OrderManager():
         
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
-            return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
+            return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
         
         return glvars.ReturnMessage(True, 'Edited Note!').send()
     

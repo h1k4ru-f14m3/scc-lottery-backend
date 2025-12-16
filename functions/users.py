@@ -154,12 +154,12 @@ class Authentication():
 
     def register(self, json_data):
         if not isinstance(json_data, dict):
-            return glvars.ReturnMessage(False, 'Something Went Wrong :(').send('json')
+            return glvars.ReturnMessage(False, 'Something Went Wrong :(').response()
         
         query = f"SELECT COUNT(*) FROM {glvars.users_table} WHERE phone_number = ?"
         check_count = self.db_man.execute_query(query, (json_data['phone_number'],))[0][0]
         if check_count != 0:
-            return glvars.ReturnMessage(False, 'Phone Number already has an account!').send('json')
+            return glvars.ReturnMessage(False, 'Phone Number already has an account!').response()
         
         # Hash the password
         salt = bcrypt.gensalt(rounds=12)
@@ -178,7 +178,7 @@ class Authentication():
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
-            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
+            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').response()
 
         new_dict.update({'logininfo': json_data['phone_number']})
 
@@ -220,7 +220,7 @@ class Authentication():
         session['user_info'] = user_obj.to_dict()
         # print(f'User OBJ: {user_obj.to_dict()}')
 
-        return glvars.ReturnData(True, 'Logged In!', user_info=session['user_info']).send('json')
+        return glvars.ReturnData(True, 'Logged In!', user_info=session['user_info']).response()
 
 
 

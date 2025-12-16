@@ -46,12 +46,18 @@ class ReturnMessage():
         self.message = message
         
 
-    def send(self, mode='dict'):
+    def send(self):
         dict_format = {'success': self.success, 'message': self.message}
-        if mode != 'json':
-            return dict_format
-        
+
+        return dict_format
+    
+
+    def response(self):
+        dict_format = {'success': self.success, 'message': self.message}
+
         return jsonify(dict_format)
+
+
         
 
 class ReturnData:
@@ -65,7 +71,7 @@ class ReturnData:
             setattr(self, key, value)
 
 
-    def send(self, mode='dict'):
+    def send(self):
         dict_format = {
             'success': self.success,
             'message': self.message
@@ -75,9 +81,20 @@ class ReturnData:
             if key not in ('success', 'message'): 
                 dict_format[key] = value
 
-        if mode == 'json':
-            return jsonify(dict_format)
         return dict_format
+    
+
+    def response(self):
+        dict_format = {
+            'success': self.success,
+            'message': self.message
+        }
+
+        for key, value in self.__dict__.items():
+            if key not in ('success', 'message'): 
+                dict_format[key] = value
+
+        return jsonify(dict_format)
 
 
 
