@@ -171,9 +171,14 @@ class Authentication():
         new_dict.update({'password': pass_hash})
         new_dict.pop('confirm_password', None)
 
+        db_conn = self.db_man.get_conn()
         # Update/Insert to Database
         # print(tuple(new_dict.values()))
-        self.db_man.add_row(glvars.users_table, tuple(new_dict.keys()), tuple(new_dict.values()))
+        self.db_man.add_row(glvars.users_table, tuple(new_dict.keys()), tuple(new_dict.values()), db_conn)
+
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
 
         new_dict.update({'logininfo': json_data['phone_number']})
 
@@ -241,12 +246,15 @@ class UserManager():
         return glvars.ReturnData(True, 'Got user!', data=user).send()
     
     
-    def add_user(self, name, phone_number, password):
+    def add_user(self, name, phone_number, password, db_conn=None):
+        if isinstance(db_conn, type(None)):
+            return glvars.ReturnMessage(False, 'Invalid db conn!').send()
+
         salt = bcrypt.gensalt(rounds=12)
         byte_pass = password.encode('utf-8')
         pass_hash = bcrypt.hashpw(byte_pass, salt)
 
-        res = self.db_man.add_row(glvars.users_table, ('name', 'phone_number', 'password'), (name, phone_number, pass_hash))
+        res = self.db_man.add_row(glvars.users_table, ('name', 'phone_number', 'password'), (name, phone_number, pass_hash), db_conn)
 
         if not res['success']:
             return glvars.ReturnMessage(False, res['message']).send()
@@ -254,7 +262,10 @@ class UserManager():
         return glvars.ReturnData(True, 'Added user!').send()
     
 
-    def edit_user(self, id, edit_vars, edit_values):
+    def edit_user(self, id, edit_vars, edit_values, db_conn=None):
+        if isinstance(db_conn, type(None)):
+            return glvars.ReturnMessage(False, 'Invalid db conn for edit_user').send()
+
         if not isinstance(edit_vars, list) or not isinstance(edit_values, list):
             return glvars.ReturnMessage(False, 'The two variables must be lists!').send()
         
@@ -271,7 +282,7 @@ class UserManager():
             return glvars.ReturnMessage(False, set_vars_res['message']).send()
         
         to_edit = user.to_dict().pop('id')
-        edit_res = self.db_man.edit_row(glvars.users_table, ('id',), (user.id,), to_edit.keys, to_edit.values)
+        edit_res = self.db_man.edit_row(glvars.users_table, ('id',), (user.id,), to_edit.keys, to_edit.values, db_conn)
 
         if not edit_res['success']:
             return glvars.ReturnMessage(False, edit_res['message']).send()

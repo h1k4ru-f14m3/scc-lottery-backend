@@ -107,6 +107,7 @@ class OrderManager():
         cart = Cart()
         cart.import_from_dict(cart_session)
 
+        db_conn = self.db_man.get_conn()
         for item in cart.items:
             ticket_get = self.tickets_man.get_ticket(item)
             if not ticket_get['success']:
@@ -117,12 +118,17 @@ class OrderManager():
                                             ('code',), 
                                             (ticket.code,), 
                                             ('status', 'buyer_id', 'expire_at'), 
-                                            (ticket.status, ticket.buyer_id, ticket.expire_at))
+                                            (ticket.status, ticket.buyer_id, ticket.expire_at),
+                                            db_conn)
             if response['success'] == False:
                 return glvars.ReturnMessage(False, response['message']).send()
             
             user.remove_set_item('tickets_ordered', ticket.code)
             cart.remove_item(ticket.code)
+
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
         return glvars.ReturnData(True, 'Removed Successfully', cart=cart.to_dict(), user=user.to_dict()).send()
     
@@ -289,9 +295,13 @@ class OrderManager():
         user = User()
         user.import_from_dict(user_session)
 
-        response = self.db_man.add_row(glvars.orders_table, ('buyer_id',), (user.id,))
+        db_conn = self.db_man.get_conn()
+        response = self.db_man.add_row(glvars.orders_table, ('buyer_id',), (user.id,), db_conn)
         # print(response)
         cart = Cart(response['id_affected'], user.id)
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')  
 
         query = f'SELECT id, buyer_id, amount_bought, tickets_bought, img_link, is_in_cart FROM {glvars.orders_table} WHERE id = ?'
         response = self.db_man.execute_query(query, (cart.id,))
@@ -302,20 +312,25 @@ class OrderManager():
     
 
     def edit_note(self, note, ticket_code):
-        ticket_get = self.tickets_man.get_ticket(ticket_id)
+        ticket_get = self.tickets_man.get_ticket(ticket_code)
         if not ticket_get['success']:
             return glvars.ReturnMessage(False, ticket_get['message']).send()
         ticket = ticket_get['data']
 
         ticket.add_note(note)
+        db_conn = self.db_man.get_conn()
         response = self.db_man.edit_row(glvars.tickets_table, 
                                         ('code',),
                                         (ticket_code,),
                                         ('note_for',),
                                         (note,))
-        
+
         if not response['success']:
             return glvars.ReturnMessage(False, response['message']).send()
+        
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res['success']:
+            return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
         
         return glvars.ReturnMessage(True, 'Edited Note!').send()
     

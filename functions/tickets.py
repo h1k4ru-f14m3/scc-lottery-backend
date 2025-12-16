@@ -204,7 +204,10 @@ class TicketsManager:
         return glvars.ReturnMessage(True, 'Successfully deleted ticket!').send()
 
         
-    def add_ticket(self, code=None):
+    def add_ticket(self, code=None, db_conn=None):
+        if isinstance(db_conn, type(None)):
+            return glvars.ReturnMessage(False, 'Invalid db conn for add_ticket!').send()
+
         if not code:
             return glvars.ReturnMessage(False, 'No code provided!').send()
         
@@ -214,7 +217,7 @@ class TicketsManager:
             return glvars.ReturnMessage(False, 'Ticket already exists!').send()
         
         ticket = Ticket(code)
-        res = self.db_man.add_row(glvars.tickets_table, ('code',), (ticket.code,))
+        res = self.db_man.add_row(glvars.tickets_table, ('code',), (ticket.code,), db_conn)
         if not res['success']:
             return glvars.ReturnMessage(False, f"Something went wrong in add tickets: {res['message']}").send()
 

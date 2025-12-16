@@ -378,11 +378,18 @@ def set_role():
     user.set_vars(["role"], [data["role"]])
     print("User OBJ Role: ", user.role)
 
+    db_conn = db_man.get_conn()
+
     usr_edit = db_man.edit_row(
-        glvars.users_table, ("id",), (user.id,), ("role",), (user.role,)
+        glvars.users_table, ("id",), (user.id,), ("role",), (user.role,), db_conn
     )
+
     if not usr_edit["success"]:
         return glvars.ReturnMessage(False, usr_edit["message"]).send("json")
+
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
 
     return glvars.ReturnMessage(True, f"Role set to {data['role']}").send("json")
 
@@ -413,9 +420,14 @@ def add_user():
     if None in [u_name, u_phone_number, u_password]:
         return glvars.ReturnMessage(False, "Insufficient data!").send("json")
 
-    u_add = users_man.add_user(u_name, u_phone_number, u_password)
+    db_conn = db_man.get_conn()
+    u_add = users_man.add_user(u_name, u_phone_number, u_password, db_conn)
     if not u_add["success"]:
         return glvars.ReturnMessage(False, u_add["message"]).send("json")
+    
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send('json')
 
     return glvars.ReturnMessage(True, "Added User!").send("json")
 
@@ -444,9 +456,14 @@ def edit_user():
 
     filtered_data = {k: v for k, v in data.items() if k != "id"}
 
-    user_edit = users_man.edit_user(user.id, filtered_data.keys, filtered_data.values)
+    db_conn = db_man.get_conn()
+    user_edit = users_man.edit_user(user.id, filtered_data.keys, filtered_data.values, db_conn)
     if not user_edit["success"]:
         return glvars.ReturnMessage(False, user_edit["message"]).send("json")
+    
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').send('json')
 
     return glvars.ReturnData(True, "Edited ticket!", data=user.to_dict()).send("json")
 
@@ -466,6 +483,8 @@ def get_tickets():
         return glvars.ReturnMessage(
             False, "Something went wrong with the database! **tickets**"
         ).send("json")
+    
+    print(f'RES: {res}')
 
     return glvars.ReturnData(True, res["message"], data=res["data"]).send("json")
 
@@ -490,11 +509,15 @@ def add_ticket():
     if not code:
         return glvars.ReturnMessage(False, "No code provided").send("json")
 
-    res = tickets_man.add_ticket(code)
+    db_conn = db_man.get_conn()
+    res = tickets_man.add_ticket(code, db_conn)
     if not res["success"]:
-        return glvars.ReturnMessage(
-            False, f"Something in the tickets went wrong: {res['message']}"
-        ).send("json")
+        return glvars.ReturnMessage(False, f"Something in the tickets went wrong: {res['message']}").send("json")
+    
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
+
     return glvars.ReturnMessage(True, "Added ticket!").send("json")
 
 
