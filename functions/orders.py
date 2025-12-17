@@ -255,7 +255,7 @@ class OrderManager:
                 (ticket.code,),
                 ("status", "expire_at", "buyer_id", "note_for"),
                 (ticket.status, ticket.expire_at, ticket.buyer_id, ticket.note_for),
-                db_conn,
+                db_conn
             )
             if not response["success"]:
                 return glvars.ReturnMessage(
@@ -263,16 +263,18 @@ class OrderManager:
                 ).send()
 
         order_del = self.db_man.delete_row(
-            glvars.orders_table, ("id",), (order.id,), db_conn
+            glvars.orders_table, "id", str(order.id), db_conn
         )
+
+        if not order_del["success"]:
+            return glvars.ReturnMessage(
+                False, f"Could not cancel the order: {order_del['message']}"
+            ).send()
+
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
             return glvars.ReturnMessage(
                 False, f"Could not cancel the order: {commit_res['message']}"
-            ).send()
-        if not order_del["success"]:
-            return glvars.ReturnMessage(
-                False, f"Could not cancel the order: {order_del['message']}"
             ).send()
 
         return glvars.ReturnMessage(True, "Order cancelled!").send()
