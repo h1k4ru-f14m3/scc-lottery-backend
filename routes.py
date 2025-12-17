@@ -1,9 +1,8 @@
-from flask import Blueprint, Flask, redirect, render_template, request, session
+from flask import Blueprint, Flask, request, session
 from flask_caching import Cache
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-import functions.cart as cart
 import functions.global_vars as glvars
 import functions.orders as orders
 import functions.tickets as tickets
@@ -80,9 +79,9 @@ def index():
     if not session_data:
         session_data = {}
 
-    return glvars.ReturnData(True, "Ok!", data=data, user_session=session_data).send(
-        "json"
-    )
+    return glvars.ReturnData(
+        True, "Ok!", data=data, user_session=session_data
+    ).response()
 
 
 @app.route("/version")
@@ -104,13 +103,15 @@ def search():
 @app.route("/bought_data")
 def get_bought_data():
     user = session.get("user_info")
+    if not user:
+        return glvars.ReturnMessage(False, "You're not logged in!").response()
 
     query = f"SELECT t.code, t.status, t.note_for FROM {glvars.tickets_table} t JOIN {glvars.users_table} u ON t.buyer_id = u.id WHERE t.buyer_id = ? AND t.status != ? AND t.status != ?"
 
     params = [user["id"], "ordered", "available"]
 
     res = db_man.execute_query(query, params)
-    if len(res) == 0:
+    if not isinstance(res, list) or not res:
         return glvars.ReturnMessage(False, "Not found!").response()
 
     return glvars.ReturnData(True, "Found!", data=res).response()
@@ -143,7 +144,11 @@ def load_user():
 
 @app.route("/is_admin")
 def is_admin():
-    if not session.get("user_info") or session.get("user_info")["role"] != "admin":
+    user = session.get("user_info")
+    if not user:
+        return glvars.ReturnMessage(False, "You are not an admin!").response()
+
+    if user["role"] != "admin":
         return glvars.ReturnMessage(False, "You are not an admin!").response()
 
     return glvars.ReturnMessage(True, "You are an admin!").response()
@@ -153,11 +158,13 @@ def is_admin():
 # Cart Routes #
 ###############
 @cart_bp.route("/")
-def cart():
+def cart_root():
     if not session.get("cart"):
         results = order_man.create_cart(session.get("user_info"))
-        if not results['success']:
-            return glvars.ReturnMessage(False, f"Something went wrong in making a cart: {results['message']}").response()
+        if not results["success"]:
+            return glvars.ReturnMessage(
+                False, f"Something went wrong in making a cart: {results['message']}"
+            ).response()
         session["cart"] = results["cart"]
 
     if not session.get("user_info"):
@@ -226,9 +233,9 @@ def confirm_cart():
     img_data = data.get("img_link")
 
     if not glvars.is_base64_image(img_data):
-        return glvars.ReturnMessage(False, "An error occured with the image!").send(
-            "json"
-        )
+        return glvars.ReturnMessage(
+            False, "An error occured with the image!"
+        ).response()
 
     res = order_man.confirm_bought(
         img_data, session.get("user_info"), session.get("cart")
@@ -240,11 +247,16 @@ def confirm_cart():
     session["cart"] = res["cart"]
     session["user_info"] = res["user"]
 
-    if session['user_info']['role'] == 'admin' or session['user_info']['role'] == 'agent':
-        if not order_man.confirm_cart(res['order_id'])['success']:
-            return glvars.ReturnMessage(False, 'Something went wrong confirming the tickets').response()
+    if (
+        session["user_info"]["role"] == "admin"
+        or session["user_info"]["role"] == "agent"
+    ):
+        if not order_man.confirm_cart(res["order_id"])["success"]:
+            return glvars.ReturnMessage(
+                False, "Something went wrong confirming the tickets"
+            ).response()
 
-    print(f'SESSION ROLE: {session['user_info']['role']}')
+    print(f"SESSION ROLE: {session['user_info']['role']}")
 
     return glvars.ReturnMessage(True, res["message"]).response()
 
@@ -256,10 +268,14 @@ def confirm_cart():
 
 @orders_bp.route("/")
 def load_orders():
-    offset = request.args.get("offset") or 0
+    offset = request.args.get("offset") or "0"
 
     query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 LIMIT 28 OFFSET {offset}"
     res = db_man.execute_query(query)
+    if not isinstance(res, list) or not res:
+        return glvars.ReturnMessage(
+            False, "Something went wrong in loading orders!"
+        ).response()
 
     orders = []
     img_data = []
@@ -278,6 +294,10 @@ def load_all():
 
     query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 28 OFFSET {offset}"
     res = db_man.execute_query(query)
+    if not isinstance(res, list) or not res:
+        return glvars.ReturnMessage(
+            False, "Something went wrong in loading orders!"
+        ).response()
 
     orders = []
     img_data = []
@@ -297,15 +317,19 @@ def load_img():
     query = f"SELECT img_link FROM {glvars.orders_table} WHERE id = ?"
 
     res = db_man.execute_query(query, (img_id,))
+    if not isinstance(res, list) or not res:
+        return glvars.ReturnMessage(
+            False, "Something went wrong in loading orders!"
+        ).response()
     try:
         img_data = res[0]
     except IndexError:
         return glvars.ReturnMessage(False, "Index Error in Load Image").response()
     print(img_data)
 
-    return glvars.ReturnData(True, f"Image Data of {img_id}", img_data=img_data).send(
-        "json"
-    )
+    return glvars.ReturnData(
+        True, f"Image Data of {img_id}", img_data=img_data
+    ).response()
 
 
 @orders_bp.route("/confirm", methods=["POST"])
@@ -338,13 +362,13 @@ def edit_note():
 @orders_bp.route("/cancel", methods=["POST"])
 def cancel_order():
     res = request.get_json()
-    order_id = res['code'][0]
+    order_id = res["code"][0]
 
     cancel_res = order_man.cancel_cart(order_id)
-    if not cancel_res['success']:
-        return glvars.ReturnMessage(False, cancel_res['message']).response()
-    
-    return glvars.ReturnMessage(True, 'Cancelled Order').response()
+    if not cancel_res["success"]:
+        return glvars.ReturnMessage(False, cancel_res["message"]).response()
+
+    return glvars.ReturnMessage(True, "Cancelled Order").response()
 
 
 ############
@@ -352,19 +376,21 @@ def cancel_order():
 ############
 @users_bp.route("/")
 def get_users():
-    offset = request.args.get('offset') or 0
-    q = request.args.get('q') or None
-    search_for = request.args.get('type') or 'id'
+    offset = int(request.args.get("offset") or "0")
+    q = request.args.get("q") or None
+    search_for = request.args.get("type") or "id"
 
     res = users_man.get_users(limit=15, offset=offset, q=q, search_for=search_for)
 
-    if not res['success']:
-        return glvars.ReturnMessage(False, "Something went wrong with the database! **users**").response()
+    if not res["success"]:
+        return glvars.ReturnMessage(
+            False, "Something went wrong with the database! **users**"
+        ).response()
 
     main_data = []
     personal_info = []
 
-    for row in res['data']:
+    for row in res["data"]:
         main_data.append([row[0], row[1], row[2]])
         personal_info.append([row[3], row[4], row[5], row[6], row[7]])
 
@@ -396,8 +422,10 @@ def set_role():
         return glvars.ReturnMessage(False, usr_edit["message"]).response()
 
     commit_res = db_man.commit(db_conn)
-    if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').response()
+    if not commit_res["success"]:
+        return glvars.ReturnMessage(
+            False, f"Could not commit: {commit_res['message']}"
+        ).response()
 
     return glvars.ReturnMessage(True, f"Role set to {data['role']}").response()
 
@@ -432,10 +460,12 @@ def add_user():
     u_add = users_man.add_user(u_name, u_phone_number, u_password, db_conn)
     if not u_add["success"]:
         return glvars.ReturnMessage(False, u_add["message"]).response()
-    
+
     commit_res = db_man.commit(db_conn)
-    if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').response()
+    if not commit_res["success"]:
+        return glvars.ReturnMessage(
+            False, f"Could not commit: {commit_res['message']}"
+        ).response()
 
     return glvars.ReturnMessage(True, "Added User!").response()
 
@@ -453,7 +483,7 @@ def del_user():
     return glvars.ReturnMessage(True, "Deleted user!").response()
 
 
-@users_bp.route("/edit_user", methods=['POST'])
+@users_bp.route("/edit_user", methods=["POST"])
 def edit_user():
     data = request.get_json()
     user_import = users_man.get_user(data["id"])
@@ -464,16 +494,20 @@ def edit_user():
 
     filtered_data = {k: v for k, v in data.items() if k != "id"}
     if not filtered_data:
-        return glvars.ReturnMessage(False, 'No params provided').response()
+        return glvars.ReturnMessage(False, "No params provided").response()
 
     db_conn = db_man.get_conn()
-    user_edit = users_man.edit_user(user.id, filtered_data.keys, filtered_data.values, db_conn)
+    user_edit = users_man.edit_user(
+        user.id, filtered_data.keys, filtered_data.values, db_conn
+    )
     if not user_edit["success"]:
         return glvars.ReturnMessage(False, user_edit["message"]).response()
-    
+
     commit_res = db_man.commit(db_conn)
-    if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').response()
+    if not commit_res["success"]:
+        return glvars.ReturnMessage(
+            False, f"Could not commit data: {commit_res['message']}"
+        ).response()
 
     return glvars.ReturnData(True, "Edited user!", data=user.to_dict()).response()
 
@@ -483,7 +517,7 @@ def edit_user():
 ##############
 @tickets_bp.route("/")
 def get_tickets():
-    offset = request.args.get("offset") or 0
+    offset = int(request.args.get("offset") or "0")
     q = request.args.get("q") or None
     search_for = request.args.get("type") or None
 
@@ -493,8 +527,8 @@ def get_tickets():
         return glvars.ReturnMessage(
             False, "Something went wrong with the database! **tickets**"
         ).response()
-    
-    print(f'RES: {res}')
+
+    print(f"RES: {res}")
 
     return glvars.ReturnData(True, res["message"], data=res["data"]).response()
 
@@ -520,18 +554,18 @@ def add_ticket():
     code = data["code"] or None
     if not code:
         return glvars.ReturnMessage(False, "No code provided").response()
-    
-    codes = str(code).strip().split(';')
-    print(f'LENGTH CODES: {len(codes)}')
-    print(f'CODE: {code}')
-    print(f'CODES: {codes}')
+
+    codes = str(code).strip().split(";")
+    print(f"LENGTH CODES: {len(codes)}")
+    print(f"CODE: {code}")
+    print(f"CODES: {codes}")
     # if len(codes) == 0 and code:
     #     codes = [code]
 
     new_codes = list()
 
     for c in codes:
-        c_mod = str(c).split('-')
+        c_mod = str(c).split("-")
 
         if len(c_mod) == 2:
             if int(c_mod[0]) > int(c_mod[1]):
@@ -541,30 +575,33 @@ def add_ticket():
                 new_codes.append(str(j))
                 res = tickets_man.add_ticket(str(j), db_conn)
                 if not res["success"]:
-                    print(f'FAILURE! {res['message']}')
+                    print(f"FAILURE! {res['message']}")
                     continue
 
         elif len(c_mod) == 1:
             new_codes.append(str(c_mod[0]))
             res = tickets_man.add_ticket(str(c_mod[0]), db_conn)
             if not res["success"]:
-                print(f'FAILURE! {res['message']}')
+                print(f"FAILURE! {res['message']}")
                 continue
-            
 
     print(f"NEW CODES: {new_codes}")
-    
-    commit_res = db_man.commit(db_conn)
-    if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
 
-    return glvars.ReturnData(True, "Added ticket(s)!", added_tickets=new_codes).response()
+    commit_res = db_man.commit(db_conn)
+    if not commit_res["success"]:
+        return glvars.ReturnMessage(
+            False, f"Could not commit: {commit_res['message']}"
+        ).send()
+
+    return glvars.ReturnData(
+        True, "Added ticket(s)!", added_tickets=new_codes
+    ).response()
 
 
 @tickets_bp.route("/del_ticket", methods=["POST"])
 def del_ticket():
     data = request.get_json()
-    print(f'DATA: {data}')
+    print(f"DATA: {data}")
     code = data["code"] or None
     if not code:
         return glvars.ReturnMessage(False, "No code provided").response()
@@ -590,17 +627,20 @@ def edit_ticket():
 
     filtered_data = {k: v for k, v in data.items() if k != "code"}
     if not filtered_data:
-        return glvars.ReturnMessage(False, 'No params provided').response()
-
+        return glvars.ReturnMessage(False, "No params provided").response()
 
     if not ticket or not ticket.is_available():
         return glvars.ReturnMessage(False, "Not Allowed!").response()
 
-    tickets_man.edit_ticket(ticket.code, filtered_data.keys, filtered_data.values, db_conn)
+    tickets_man.edit_ticket(
+        ticket.code, filtered_data.keys, filtered_data.values, db_conn
+    )
 
     commit_res = db_man.commit(db_conn)
-    if not commit_res['success']:
-        return glvars.ReturnMessage(False, f'Could not commit: {commit_res['message']}').send()
+    if not commit_res["success"]:
+        return glvars.ReturnMessage(
+            False, f"Could not commit: {commit_res['message']}"
+        ).send()
 
     return glvars.ReturnData(True, "Edited ticket!", data=ticket.to_dict()).response()
 
