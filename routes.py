@@ -292,7 +292,7 @@ def load_orders():
 def load_all():
     offset = request.args.get("offset") or 0
 
-    query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 28 OFFSET {offset}"
+    query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 15 OFFSET {offset}"
     res = db_man.execute_query(query)
     if not isinstance(res, list) or not res:
         return glvars.ReturnMessage(
@@ -391,7 +391,7 @@ def get_users():
     personal_info = []
 
     for row in res["data"]:
-        main_data.append([row[0], row[1], row[2]])
+        main_data.append([row[0], row[1], row[2], row[5], row[7]])
         personal_info.append([row[3], row[4], row[5], row[6], row[7]])
 
     return glvars.ReturnData(
@@ -433,6 +433,7 @@ def set_role():
 @users_bp.route("/get_user", methods=["POST"])
 def get_user():
     data = request.get_json()
+    
     q = data["id"]
     if not q:
         return glvars.ReturnMessage(False, "No User ID provided!").response()
@@ -498,7 +499,7 @@ def edit_user():
 
     db_conn = db_man.get_conn()
     user_edit = users_man.edit_user(
-        user.id, filtered_data.keys, filtered_data.values, db_conn
+        user.id, list(filtered_data.keys()), list(filtered_data.values()), db_conn
     )
     if not user_edit["success"]:
         return glvars.ReturnMessage(False, user_edit["message"]).response()
@@ -633,7 +634,7 @@ def edit_ticket():
         return glvars.ReturnMessage(False, "Not Allowed!").response()
 
     tickets_man.edit_ticket(
-        ticket.code, filtered_data.keys, filtered_data.values, db_conn
+        ticket.code, list(filtered_data.keys()), list(filtered_data.values()), db_conn
     )
 
     commit_res = db_man.commit(db_conn)
