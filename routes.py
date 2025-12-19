@@ -280,8 +280,8 @@ def load_orders():
         query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 LIMIT 28 OFFSET {offset}"
         res = db_man.execute_query(query)
     
-    
-    if not isinstance(res, list) or not res:
+    if not isinstance(res, list):
+        print('SOMETHING WENT WRONG IN LOADING ORDERS!')
         return glvars.ReturnMessage(
             False, "Something went wrong in loading orders!"
         ).response()
@@ -311,7 +311,7 @@ def load_all():
         query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 15 OFFSET {offset}"
         res = db_man.execute_query(query)
 
-    if not isinstance(res, list) or not res:
+    if not isinstance(res, list):
         return glvars.ReturnMessage(
             False, "Something went wrong in loading orders!"
         ).response()
