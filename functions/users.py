@@ -288,15 +288,16 @@ class UserManager():
         for i, var in enumerate(edit_vars):
             if var == 'password':
                 salt = bcrypt.gensalt(rounds=12)
-                byte_pass = var.encode('utf-8')
+                byte_pass = edit_values[i].encode('utf-8')
                 pass_hash = bcrypt.hashpw(byte_pass, salt)
 
                 try:
-                    edit_vars[i] = pass_hash
+                    edit_values[i] = pass_hash
                 except Exception as e:
                     return glvars.ReturnMessage(False, f'Something went wrong hashing the password: {e}').send()
                 
-
+        print(f'EDIT_VARS: {edit_vars}')
+        print(f'EDIT_VALUES: {edit_values}')
         edit_res = self.db_man.edit_row(glvars.users_table, ('id',), (u_id,), edit_vars, edit_values, db_conn)
 
         if not edit_res['success']:

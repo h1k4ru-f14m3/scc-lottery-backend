@@ -16,7 +16,7 @@ db_path = os.getenv('DB_PATH', './data.db')
 tickets_table = os.getenv('TICKETS_TABLE', 'tickets') 
 users_table = os.getenv('USERS_TABLE', 'users')
 orders_table = os.getenv('ORDERS_TABLE', 'orders')
-secret_key = os.getenv('SECRET_KEY')
+secret_key = os.getenv('SECRET_KEY', '')
 price_each = os.getenv('PRICE_EACH', 30000)
 
 status_codes = [
