@@ -234,7 +234,7 @@ class UserManager():
         query = f"SELECT id, name, role, tickets_ordered, tickets_bought, phone_number, email, address FROM {glvars.users_table} LIMIT {limit} OFFSET {offset}"
 
         if q:
-            params = f'%{q}%'
+            params = f'%{q}%'    
             query = f"SELECT id, name, role, tickets_ordered, tickets_bought, phone_number, email, address FROM {glvars.users_table} WHERE {search_for} LIKE ? LIMIT {limit} OFFSET {offset}"
             res = self.db_man.execute_query(query, (params,))
         else:
