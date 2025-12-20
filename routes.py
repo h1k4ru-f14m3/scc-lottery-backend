@@ -63,8 +63,9 @@ def index():
     # query = f"SELECT t.code, t.buyer_id, u.name, u.address, u.phone_number FROM {glvars.tickets_table} t JOIN {glvars.users_table} u ON t.buyer_id = u.id;"
     q = request.args.get("q")
     offset = request.args.get("offset") or 0
+    limit = request.args.get("limit") or 28
 
-    query = f"SELECT * FROM {glvars.tickets_table} WHERE status = 'available' LIMIT 28 OFFSET {offset}"
+    query = f"SELECT * FROM {glvars.tickets_table} WHERE status = 'available' LIMIT {limit} OFFSET {offset}"
 
     if q:
         refined_q = f"%{q}%"
