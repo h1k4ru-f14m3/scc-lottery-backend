@@ -396,8 +396,12 @@ def get_users():
     offset = int(request.args.get("offset") or "0")
     q = request.args.get("q") or None
     search_for = request.args.get("type") or "id"
+    limit = request.args.get("limit") or '15'
 
-    res = users_man.get_users(limit=15, offset=offset, q=q, search_for=search_for)
+    try:
+        res = users_man.get_users(limit=int(limit), offset=offset, q=q, search_for=search_for)
+    except Exception:
+        return glvars.ReturnMessage(False, "Limit must be a number!").response()
 
     if not res["success"]:
         return glvars.ReturnMessage(
@@ -528,6 +532,29 @@ def edit_user():
         ).response()
 
     return glvars.ReturnData(True, "Edited user!", data=user.to_dict()).response()
+
+
+@users_bp.route("/load_pfp")
+def load_img():
+    q = request.args.get('q') or None
+    search_for = request.args.get('type') or None
+    if not q or not search_for:
+        return glvars.ReturnMessage(False, 'Insufficient data!').response()
+
+    query = f"SELECT pfp FROM {glvars.users_table} WHERE {search_for} = ?"
+
+    res = db_man.execute_query(query, (q,))
+    if not isinstance(res, list) or not res:
+        return glvars.ReturnMessage(
+            False, "Something went wrong in loading orders!"
+        ).response()
+
+    img_data = res
+    print(img_data)
+
+    return glvars.ReturnData(
+        True, f"Image Data", img_data=img_data
+    ).response()
 
 
 ##############
