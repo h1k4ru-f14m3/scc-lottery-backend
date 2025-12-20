@@ -1,31 +1,55 @@
 import sqlite3
 import os
+import functions.users as usr
+import functions.db_man as db
 
-db_file_name = 'data.db'
-sql_script_path = 'db_queries.sql' # Your .sql file path
+db_path = 'data.db'
 
-try:
-    conn = sqlite3.connect(db_file_name)
-    cursor = conn.cursor()
-    print(f"Connected to '{db_file_name}'.")
+def create_db():
+    db_file_name = db_path
+    sql_script_path = 'db_queries.sql' # Your .sql file path
 
-    # 1. Open and read the .sql file
-    if os.path.exists(sql_script_path):
-        with open(sql_script_path, 'r') as sql_file:
-            sql_script = sql_file.read()
-        
-        # 2. Execute the entire script
-        cursor.executescript(sql_script)
-        conn.commit()
-        print(f"Script '{sql_script_path}' executed successfully.")
-    else:
-        print(f"Error: The file '{sql_script_path}' was not found.")
+    try:
+        conn = sqlite3.connect(db_file_name)
+        cursor = conn.cursor()
+        print(f"Connected to '{db_file_name}'.")
 
-except sqlite3.Error as e:
-    print(f"SQLite error: {e}")
-except Exception as e:
-    print(f"General error: {e}")
-finally:
-    if conn:
-        conn.close()
-        print("Database connection closed.")
+        # 1. Open and read the .sql file
+        if os.path.exists(sql_script_path):
+            with open(sql_script_path, 'r') as sql_file:
+                sql_script = sql_file.read()
+            
+            # 2. Execute the entire script
+            cursor.executescript(sql_script)
+            conn.commit()
+            print(f"Script '{sql_script_path}' executed successfully.")
+        else:
+            print(f"Error: The file '{sql_script_path}' was not found.")
+
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    except Exception as e:
+        print(f"General error: {e}")
+    finally:
+        if conn:
+            conn.close()
+            print("Database connection closed.")
+
+
+def create_admin():
+    db_man = db.DBManager(db_path)
+    user_man = usr.UserManager(db_man)
+
+    db_conn = db_man.get_conn()
+    res = user_man.add_user('admin', 'admin', 'admin@12345', db_conn)
+    if not res['success']:
+        print(f"Could not create admin: {res['message']}")
+        return
+    
+    commit_res = db_man.commit(db_conn)
+    if not commit_res['success']:
+        print(f"Could not commit changes: {commit_res['message']}")
+        return
+create_db()
+create_db()
+print('OK!')
