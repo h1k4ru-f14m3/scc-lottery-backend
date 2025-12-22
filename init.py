@@ -46,10 +46,15 @@ def create_admin():
         print(f"Could not create admin: {res['message']}")
         return
     
+    edit_res = user_man.edit_user('1', ('role',), ('admin',), db_conn)
+    if not edit_res['success']:
+        print(f'ERROR CREATING ADMIN! {edit_res['message']}')
+    
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
         print(f"Could not commit changes: {commit_res['message']}")
         return
+
 create_db()
-create_db()
+create_admin()
 print('OK!')
