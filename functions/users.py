@@ -178,7 +178,7 @@ class Authentication():
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res['success']:
-            return glvars.ReturnMessage(False, f'Could not commit data: {commit_res['message']}').response()
+            return glvars.ReturnMessage(False, f"Could not commit data: {commit_res['message']}").response()
 
         new_dict.update({'logininfo': json_data['phone_number']})
 
