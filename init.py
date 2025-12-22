@@ -78,6 +78,7 @@ def create_admin():
         print(f"Could not commit changes: {commit_res['message']}")
         return
 
+setup_env()
 create_db()
 create_admin()
 print('OK!')
