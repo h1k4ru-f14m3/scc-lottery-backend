@@ -2,8 +2,31 @@ import sqlite3
 import os
 import functions.users as usr
 import functions.db_man as db
+from dotenv import load_dotenv, set_key
+import secrets
 
+# ... (your existing imports)
+
+# Path to your .env file
 db_path = 'data.db'
+ENV_PATH = '.env'
+
+def setup_env():
+    """Generates a SECRET_KEY if it doesn't exist in .env"""
+    # Create the file if it doesn't exist
+    if not os.path.exists(ENV_PATH):
+        with open(ENV_PATH, 'w') as f:
+            f.write('')
+
+    load_dotenv(ENV_PATH)
+    
+    if not os.getenv('SECRET_KEY'):
+        # Generate a high-entropy 32-byte string
+        new_key = secrets.token_hex(32)
+        set_key(ENV_PATH, 'SECRET_KEY', new_key)
+        print(f"Generated new SECRET_KEY in {ENV_PATH}")
+    else:
+        print("SECRET_KEY already exists in .env")
 
 def create_db():
     db_file_name = db_path
