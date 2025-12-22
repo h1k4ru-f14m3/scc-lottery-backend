@@ -309,6 +309,6 @@ class UserManager():
     def delete_user(self, id):
         res = self.db_man.delete_row(glvars.users_table, ['id'], [id])
         if not res['success']:
-            return glvars.ReturnMessage(False, f'Error: {res['message']}').send()
+            return glvars.ReturnMessage(False, f"Error: {res['message']}").send()
         
         return glvars.ReturnMessage(True, 'Successfully deleted the user!').send()
