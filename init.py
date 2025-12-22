@@ -71,7 +71,7 @@ def create_admin():
     
     edit_res = user_man.edit_user('1', ('role',), ('admin',), db_conn)
     if not edit_res['success']:
-        print(f'ERROR CREATING ADMIN! {edit_res['message']}')
+        print(f"ERROR CREATING ADMIN! {edit_res['message']}")
     
     commit_res = db_man.commit(db_conn)
     if not commit_res['success']:
