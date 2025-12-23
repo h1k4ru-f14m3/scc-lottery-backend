@@ -31,10 +31,7 @@ CORS(
     app,
     supports_credentials=True,
     origins=[
-        "http://localhost:5173",
-        "https://scc-lottery.netlify.app",
-        "https://scc-lottery-frontend-rho.vercel.app",
-        "https://scc-lottery.h1k4ru.dev",
+        "https://lucky27.kawdai.org",
     ],
 )
 Cache().init_app(app)
