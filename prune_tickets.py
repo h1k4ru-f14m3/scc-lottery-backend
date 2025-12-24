@@ -5,8 +5,8 @@ import datetime
 import time
 import logging
 
-db_man = DBManager('./data.db')
-log_file = './prune_job.log'
+db_man = DBManager('/home/admin/scc-lottery-backend/data.db')
+log_file = '/home/admin/scc-lottery-backend/prune_job.log'
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
