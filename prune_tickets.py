@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 def prune():
     now = datetime.datetime.now().strftime(glvars.format_code)
     query = f'SELECT * FROM {glvars.tickets_table} WHERE expire_at <= ?'
+    db_conn = db_man.get_conn()
     res = db_man.execute_query(query, (now,))
     if not res:
         logger.info('No tickets...\n')
@@ -28,11 +29,15 @@ def prune():
                                    ('code',), 
                                    (ticket.code,), 
                                    ('status', 'expire_at', 'buyer_id', 'note_for'),
-                                   (ticket.status, ticket.expire_at, ticket.buyer_id, ticket.note_for))
+                                   (ticket.status, ticket.expire_at, ticket.buyer_id, ticket.note_for),
+                                   db_conn)
         if not response['success']:
             logger.error(response['message'])
 
-        logger.info(response['success'])
+        logger.info(f"TICKET EDIT - {response['success']}: {response['message']}")
+
+    commit_res = db_man.commit(db_conn)
+    logger.info(f"COMMIT - {commit_res['success']}: {commit_res['message']}")
 
     logger.info('\n Everything went well! \n')
 
@@ -45,5 +50,6 @@ def loop():
         time.sleep(3600)
 
 if __name__ == '__main__':
-    loop()
+    # loop()
+    prune()
     
