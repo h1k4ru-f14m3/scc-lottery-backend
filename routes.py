@@ -22,7 +22,7 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 
-app.config["SESSION_FILE_DIR"] = "/tmp/flask_sessions"
+app.config["SESSION_FILE_DIR"] = "/home/admin/scc-lottery-backend/tmp/flask_sessions"
 
 app.config["CACHE_TYPE"] = "simple"
 app.config["CACHE_DEFAULT_TIMEOUT"] = 300
@@ -31,6 +31,7 @@ CORS(
     app,
     supports_credentials=True,
     origins=[
+        "http://localhost:5173",
         "https://lucky27.kawdai.org",
     ],
 )
@@ -478,6 +479,7 @@ def add_user():
 
     db_conn = db_man.get_conn()
     u_add = users_man.add_user(u_name, u_phone_number, u_password, db_conn)
+
     if not u_add["success"]:
         return glvars.ReturnMessage(False, u_add["message"]).response()
 
