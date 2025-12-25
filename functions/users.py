@@ -259,7 +259,7 @@ class UserManager():
         return glvars.ReturnData(True, 'Got user!', data=user).send()
     
     
-    def add_user(self, name, phone_number, password, db_conn=None):
+    def add_user(self, name, phone_number, password, address, db_conn=None):
         if isinstance(db_conn, type(None)):
             return glvars.ReturnMessage(False, 'Invalid db conn!').send()
 
@@ -267,7 +267,7 @@ class UserManager():
         byte_pass = password.encode('utf-8')
         pass_hash = bcrypt.hashpw(byte_pass, salt)
 
-        res = self.db_man.add_row(glvars.users_table, ('name', 'phone_number', 'password'), (name, phone_number, pass_hash), db_conn)
+        res = self.db_man.add_row(glvars.users_table, ('name', 'phone_number', 'password', 'address'), (name, phone_number, pass_hash, address), db_conn)
 
         if not res['success']:
             return glvars.ReturnMessage(False, res['message']).send()
@@ -306,8 +306,14 @@ class UserManager():
         return glvars.ReturnMessage(True, 'Edited User!').send()
     
 
-    def delete_user(self, id):
-        res = self.db_man.delete_row(glvars.users_table, ['id'], [id])
+    def delete_user(self, id, db_conn):
+        if isinstance(db_conn, type(None)):
+            return glvars.ReturnMessage(False, 'DB CONN NOT PROVIDED!').send()
+        
+        if id == 1:
+            return glvars.ReturnMessage(False, 'CANNOT DELETE ADMIN!').send()
+
+        res = self.db_man.delete_row(glvars.users_table, 'id', str(id), db_conn)
         if not res['success']:
             return glvars.ReturnMessage(False, f"Error: {res['message']}").send()
         

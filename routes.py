@@ -473,12 +473,13 @@ def add_user():
     u_name = data["name"]
     u_phone_number = data["phone_number"]
     u_password = data["password"]
+    u_address = data["address"]
 
-    if None in [u_name, u_phone_number, u_password]:
+    if None in [u_name, u_phone_number, u_password, u_address]:
         return glvars.ReturnMessage(False, "Insufficient data!").response()
 
     db_conn = db_man.get_conn()
-    u_add = users_man.add_user(u_name, u_phone_number, u_password, db_conn)
+    u_add = users_man.add_user(u_name, u_phone_number, u_password, u_address, db_conn)
 
     if not u_add["success"]:
         return glvars.ReturnMessage(False, u_add["message"]).response()
