@@ -231,7 +231,7 @@ def confirm_cart():
     data = request.get_json()
     img_data = data.get("img_link")
 
-    if not glvars.is_base64_image(img_data):
+    if not glvars.is_base64_image(img_data) or not img_data:
         return glvars.ReturnMessage(
             False, "An error occured with the image!"
         ).response()
@@ -492,15 +492,21 @@ def add_user():
     return glvars.ReturnMessage(True, "Added User!").response()
 
 
-@users_bp.route("/del_user")
+@users_bp.route("/del_user", methods=['POST'])
 def del_user():
-    u_id = request.args.get("id")
+    data = request.get_json()
+    u_id = data['id']
     if not u_id:
         return glvars.ReturnMessage(False, "Insufficient data!").response()
 
-    u_del = users_man.delete_user(u_id)
+    db_conn = db_man.get_conn()
+    u_del = users_man.delete_user(u_id, db_conn)
     if not u_del["success"]:
         return glvars.ReturnMessage(False, u_del["message"]).response()
+    
+    commit_res = db_man.commit(db_conn)
+    if not commit_res:
+        return glvars.ReturnMessage(False, commit_res['message']).response()
 
     return glvars.ReturnMessage(True, "Deleted user!").response()
 
