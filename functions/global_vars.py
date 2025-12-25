@@ -29,7 +29,7 @@ status_codes = [
 format_code = os.getenv('FORMAT_CODE', '%Y-%m-%d %H:%M:%S')
 
 expire_hours = [
-    int(os.getenv('ORDERED_EXPIRE_TIME', 2)),
+    int(os.getenv('ORDERED_EXPIRE_TIME', 1)),
     int(os.getenv('PROCESSED_EXPIRE_TIME', 24))
 ]
 
