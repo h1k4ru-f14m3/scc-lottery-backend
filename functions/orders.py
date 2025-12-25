@@ -45,21 +45,25 @@ class OrderManager:
         if not response["success"]:
             return glvars.ReturnMessage(False, response["message"]).send()
 
-        commit_res = self.db_man.commit(db_conn)
-        if not commit_res["success"]:
-            return glvars.ReturnMessage(False, commit_res["message"]).send()
-
         """Edit Cart Session"""
         cart = Cart()
         cart.import_from_dict(cart_session)
         cart = cart.add_item(ticket_id, user_dict=user_session)
+        cart_dict = cart.to_dict()
 
-        # Edit User Session
+        """ Edit User Session """
         user.add_set_item("tickets_ordered", ticket_id)
+        user_dict = user.to_dict()
+
+        self.save_to_db(user_dict, cart_dict, db_conn)
+
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res["success"]:
+            return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         """Return the Data"""
         return glvars.ReturnData(
-            True, "Added ticket!", cart=cart.to_dict(), user=user.to_dict()
+            True, "Added ticket!", cart=cart_dict, user=user_dict
         ).send()
 
     def remove_tickets_from_cart(self, ticket_id, user_session, cart_session):
@@ -279,12 +283,14 @@ class OrderManager:
 
         return glvars.ReturnMessage(True, "Order cancelled!").send()
 
-    def save_to_db(self, user_session, cart_session):
+    def save_to_db(self, user_session, cart_session, given_db_conn=None):
         # Save User
         user = User()
         user.import_from_dict(user_session)
         user_dict = user.to_dict()
-        db_conn = self.db_man.get_conn()
+        db_conn = given_db_conn
+        if not given_db_conn:
+            db_conn = self.db_man.get_conn()
 
         response = self.db_man.edit_row(
             glvars.users_table,
@@ -319,9 +325,10 @@ class OrderManager:
         if response["success"] == False:
             return glvars.ReturnMessage(False, response["message"]).send()
 
-        commit_res = self.db_man.commit(db_conn)
-        if not commit_res["success"]:
-            return glvars.ReturnMessage(False, commit_res["message"]).send()
+        if not given_db_conn:
+            commit_res = self.db_man.commit(db_conn)
+            if not commit_res["success"]:
+                return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         return glvars.ReturnMessage(True, "Successfully saved to the database").send()
 
