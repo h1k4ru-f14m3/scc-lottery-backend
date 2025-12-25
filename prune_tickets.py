@@ -5,12 +5,34 @@ import datetime
 import time
 import logging
 
-db_man = DBManager('/home/admin/scc-lottery-backend/data.db')
-log_file = '/home/admin/scc-lottery-backend/prune_job.log'
+# db_man = DBManager('/home/admin/scc-lottery-backend/data.db')
+# log_file = '/home/admin/scc-lottery-backend/prune_job.log'
+
+db_man = DBManager('./data.db')
+log_file = './prune_job.log'
 logging.basicConfig(filename=log_file, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def prune():
+
+def prune_ghost_orders():
+    db_conn = db_man.get_conn()
+    ghost_orders = db_man.execute_query(f'SELECT id, tickets_bought FROM {glvars.orders_table} WHERE tickets_bought IS NULL')
+    if not ghost_orders:
+        logger.info('No ghost orders...\n')
+        return
+    
+    for row in ghost_orders:
+        res = db_man.delete_row(glvars.orders_table, 'id', str(row[0]), db_conn)
+        logger.info(f"SUCCESS: {res['success']} - MESSAGE: {res['message']}")
+        logger.info(f"DELETE ORDER {row[0]} - TICKETS_BOUGHT: {row[1]}\n")
+
+    commit_res = db_man.commit(db_conn)
+    logger.info(f"COMMIT: SUCCESS - {commit_res['success']} : {commit_res['message']}")
+
+    logger.info(f'\n Successfully pruned ghost orders! \n')
+
+
+def prune_tickets():
     now = datetime.datetime.now().strftime(glvars.format_code)
     query = f'SELECT * FROM {glvars.tickets_table} WHERE expire_at <= ?'
     db_conn = db_man.get_conn()
@@ -39,17 +61,18 @@ def prune():
     commit_res = db_man.commit(db_conn)
     logger.info(f"COMMIT - {commit_res['success']}: {commit_res['message']}")
 
-    logger.info('\n Everything went well! \n')
+    logger.info('\n Successfully pruned expired tickets! \n')
 
 
 def loop():
     while True:
         logger.info('Start prune! \n')
-        prune()
+        prune_tickets()
         logger.info('Finished Prune! \n')
         time.sleep(3600)
 
 if __name__ == '__main__':
     # loop()
-    prune()
+    prune_tickets()
+    prune_ghost_orders()
     
