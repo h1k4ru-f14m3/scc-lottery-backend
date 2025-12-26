@@ -9,6 +9,7 @@ class User():
         self.name = ''
         self.email = None
         self.phone_number = None
+        self.address = None
         self.role = None
         self.tickets_ordered = set() 
         self.tickets_bought = set()
@@ -25,6 +26,7 @@ class User():
             'id': self.id,
             'name': self.name,
             'email': self.email,
+            'address': self.address,
             'phone_number': self.phone_number,
             'role': self.role,
             'tickets_bought': ';'.join(self.tickets_bought),
@@ -251,7 +253,7 @@ class UserManager():
 
     def get_user(self, id):
         user = User()
-        query = f'SELECT id, name, email, phone_number, role, tickets_ordered, tickets_bought, pfp FROM {glvars.users_table} WHERE id = ?'
+        query = f'SELECT id, name, email, address, phone_number, role, tickets_ordered, tickets_bought, pfp FROM {glvars.users_table} WHERE id = ?'
         res = self.db_man.execute_query(query, (id,))
 
         try:
