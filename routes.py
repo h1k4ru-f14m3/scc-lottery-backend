@@ -31,7 +31,6 @@ CORS(
     app,
     supports_credentials=True,
     origins=[
-        "http://localhost:5173",
         "https://lucky27.kawdai.org",
     ],
 )
@@ -182,9 +181,13 @@ def add_to_cart():
     if not session.get("user_info"):
         return glvars.ReturnMessage(False, "Login first").response()
 
-    if not session.get("cart"):
+    print(f"CART_SESSION 1: {session.get('cart')}")
+    if not session.get("cart") or not session.get("cart")["is_in_cart"]:
+        print('\nNEW CART\n')
         results = order_man.create_cart(session.get("user_info"))
         session["cart"] = results["cart"]
+
+    print(f"CART_SESSION 1: {session.get('cart')}")
 
     data = request.get_json()
     ticket_code = data.get("code")
@@ -243,7 +246,7 @@ def confirm_cart():
     if not res["success"]:
         return glvars.ReturnMessage(False, res["message"]).response()
 
-    session["cart"] = res["cart"]
+    session["cart"] = None
     session["user_info"] = res["user"]
 
     if (
@@ -273,10 +276,10 @@ def load_orders():
 
     if search_q and search_for:
         params = f'%{search_q}%'
-        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 AND {search_for} LIKE ? LIMIT 28 OFFSET {offset}"
+        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.is_in_cart = 1 THEN 'ordered' WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 AND {search_for} LIKE ? LIMIT 28 OFFSET {offset}"
         res = db_man.execute_query(query, (params,))
     else:
-        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 LIMIT 28 OFFSET {offset}"
+        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.is_in_cart = 1 THEN 'ordered' WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE o.confirmed = 0 AND o.is_in_cart = 0 LIMIT 28 OFFSET {offset}"
         res = db_man.execute_query(query)
     
     if not isinstance(res, list):
@@ -304,10 +307,10 @@ def load_all():
 
     if search_q and search_for:
         params = f'%{search_q}%'
-        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE {search_for} LIKE ? LIMIT 15 OFFSET {offset}"
+        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.is_in_cart = 1 THEN 'ordered' WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id WHERE {search_for} LIKE ? LIMIT 15 OFFSET {offset}"
         res = db_man.execute_query(query, (params,))
     else:
-        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 15 OFFSET {offset}"
+        query = f"SELECT o.id, u.id, u.name, o.tickets_bought, CASE WHEN o.is_in_cart = 1 THEN 'ordered' WHEN o.confirmed = 0 THEN 'processing' WHEN o.confirmed = 1 THEN 'confirmed' END AS status, o.id FROM {glvars.orders_table} o JOIN {glvars.users_table} u ON o.buyer_id = u.id LIMIT 15 OFFSET {offset}"
         res = db_man.execute_query(query)
 
     if not isinstance(res, list):
