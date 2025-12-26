@@ -218,8 +218,9 @@ class Authentication():
 
         from functions.cart import Cart
         cart_obj = Cart()
-        cart_res = self.db_man.execute_query(f"SELECT id, buyer_id, amount_bought, tickets_bought, img_link, is_in_cart FROM {glvars.orders_table} WHERE buyer_id = ?", (user_obj.id,))
-        cart_obj.import_from_db(cart_res[0])
+        cart_res = self.db_man.execute_query(f"SELECT id, buyer_id, amount_bought, tickets_bought, img_link, is_in_cart FROM {glvars.orders_table} WHERE buyer_id = ?AND is_in_cart = 1", (user_obj.id,))
+        if cart_res:
+            cart_obj.import_from_db(cart_res[0])
 
         session['user_info'] = user_obj.to_dict()
         session['cart'] = cart_obj.to_dict()
