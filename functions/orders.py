@@ -227,7 +227,8 @@ class OrderManager:
                 return glvars.ReturnMessage(False, response["message"]).send()
 
         cart_edit = self.db_man.edit_row(
-            glvars.orders_table, ("id",), (order_id,), ("confirmed",), (1,), db_conn
+            glvars.orders_table, ("id",), (order_id,), ("confirmed",),
+              (1,), db_conn
         )
         if cart_edit["success"] == False:
             return glvars.ReturnMessage(False, cart_edit["message"]).send()
@@ -340,7 +341,7 @@ class OrderManager:
         response = self.db_man.add_row(
             glvars.orders_table, ("buyer_id",), (user.id,), db_conn
         )
-        print(response)
+        print(f"CREATE CART: {response}")
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
