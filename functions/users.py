@@ -195,7 +195,7 @@ class Authentication():
         if 'logininfo' not in dict_check.keys():
             dict_check.update({'logininfo': json_data['phone_number']})
 
-        query = "SELECT password, id, name, email, phone_number, role, tickets_bought, tickets_ordered, pfp FROM users WHERE phone_number = ?"
+        query = "SELECT password, id, name, email, phone_number, role, address, tickets_bought, tickets_ordered, pfp FROM users WHERE phone_number = ?"
         
         db_result = self.db_man.execute_query(query, (dict_check['logininfo'],))
         if not db_result:
