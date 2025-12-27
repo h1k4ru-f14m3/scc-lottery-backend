@@ -102,7 +102,9 @@ class OrderManager:
         # Edit User Session
         user.remove_set_item("tickets_ordered", ticket_id)
 
-        self.save_to_db(user.to_dict(), cart.to_dict(), db_conn)
+        save_status = self.save_to_db(user.to_dict(), cart.to_dict(), db_conn)
+        if not save_status['success']:
+            return glvars.ReturnMessage(False, save_status['message']).send()
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
