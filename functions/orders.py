@@ -94,10 +94,6 @@ class OrderManager:
         if not response["success"]:
             return glvars.ReturnMessage(False, response["message"]).send()
 
-        commit_res = self.db_man.commit(db_conn)
-        if not commit_res["success"]:
-            return glvars.ReturnMessage(False, commit_res["message"]).send()
-
         """Edit Cart Session"""
         cart = Cart()
         cart.import_from_dict(cart_session)
@@ -105,6 +101,12 @@ class OrderManager:
 
         # Edit User Session
         user.remove_set_item("tickets_ordered", ticket_id)
+
+        self.save_to_db(user.to_dict(), cart.to_dict(), db_conn)
+
+        commit_res = self.db_man.commit(db_conn)
+        if not commit_res["success"]:
+            return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         """Return the Data"""
         return glvars.ReturnData(

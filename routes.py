@@ -22,7 +22,7 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 
-app.config["SESSION_FILE_DIR"] = "/home/admin/scc-lottery-backend/tmp/flask_sessions"
+app.config["SESSION_FILE_DIR"] = "./tmp/flask_sessions"
 
 app.config["CACHE_TYPE"] = "simple"
 app.config["CACHE_DEFAULT_TIMEOUT"] = 300
@@ -31,6 +31,7 @@ CORS(
     app,
     supports_credentials=True,
     origins=[
+        "http://localhost:5173",
         "https://lucky27.kawdai.org",
     ],
 )
@@ -112,7 +113,7 @@ def get_bought_data():
     if not isinstance(res, list) or not res:
         return glvars.ReturnMessage(False, "Not found!").response()
 
-    return glvars.ReturnData(True, "Found!", data=res).response()
+    return glvars.ReturnData(False, "Found!", data=res).response()
 
 
 @app.route("/register", methods=["POST"])
@@ -226,7 +227,7 @@ def remove_from_cart():
     session["user_info"] = response["user"]
     session["cart"] = response["cart"]
 
-    return glvars.ReturnData(True, "Added to cart").response()
+    return glvars.ReturnData(True, "Removed from cart").response()
 
 
 @cart_bp.route("/confirm", methods=["POST"])
