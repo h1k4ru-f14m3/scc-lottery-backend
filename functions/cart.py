@@ -54,7 +54,7 @@ class Cart():
             if user_rm_return_var['success'] == False:
                 return glvars.ReturnMessage(False, user_rm_return_var['message'])
             
-        return user_obj.to_dict()
+        return self
     
 
     def clear_cart(self): 
