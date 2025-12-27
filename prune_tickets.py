@@ -1,5 +1,6 @@
 from functions.db_man import DBManager
 from functions.tickets import Ticket
+from functions.cart import Cart
 import functions.global_vars as glvars
 import datetime
 import time
@@ -42,9 +43,14 @@ def prune_tickets():
         return 
 
     for row in res:
+        # EDIT TICKETS
         ticket = Ticket(row[0])
         query2 = f'SELECT code, status, expire_at, buyer_id, note_for FROM {glvars.tickets_table} WHERE code = ?'
-        ticket.import_from_db(db_man.execute_query(query2, (row[0],))[0])
+        ticket_res = db_man.execute_query(query2, (row[0],))
+        if not isinstance(ticket_res, list) or not ticket_res:
+            logger.error(f'SOMETHING WENT WRONG IN TICKET - {ticket_res}')
+            continue
+        ticket.import_from_db(ticket_res[0])
 
         ticket.reset()
         response = db_man.edit_row(glvars.tickets_table, 
@@ -55,8 +61,33 @@ def prune_tickets():
                                    db_conn)
         if not response['success']:
             logger.error(response['message'])
+            continue
 
-        logger.info(f"TICKET EDIT - {response['success']}: {response['message']}")
+        # EDIT ORDERS
+        order_cart = Cart()
+        query3 = f"SELECT * FROM {glvars.orders_table} WHERE ';' || tickets_bought || ';' LIKE '%;{row[0]};%'"
+        order_res = db_man.execute_query(query3,)
+        if not isinstance(order_res, list) or not order_res:
+            logger.error(f'SOMETHING WENT WRONG IN ORDERS - {order_res}')
+            continue
+        order_cart.import_from_db(order_res[0])
+
+        order_cart.remove_item(ticket.code)
+
+        if order_cart.items:
+            response2 = db_man.edit_row(glvars.orders_table,
+                                    ('id',),
+                                    (order_cart.id,),
+                                    ('tickets_bought',),
+                                    (order_cart.to_dict()['tickets_bought'],),
+                                    db_conn)
+        else:
+            response2 = db_man.delete_row(str(glvars.orders_table), 'id', str(order_cart.id), db_conn)
+        if not response2['success']:
+            logger.error(response2['message'])
+            continue
+
+        logger.info(f"TICKET EDIT {row[0]} - {response['success']}: {response['message']}")
 
     commit_res = db_man.commit(db_conn)
     logger.info(f"COMMIT - {commit_res['success']}: {commit_res['message']}")
