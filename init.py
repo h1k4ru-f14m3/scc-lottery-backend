@@ -64,7 +64,7 @@ def create_admin():
     user_man = usr.UserManager(db_man)
 
     db_conn = db_man.get_conn()
-    res = user_man.add_user('admin', 'admin', 'admin@12345', db_conn)
+    res = user_man.add_user('admin', 'admin', 'admin@12345', 'admin', db_conn)
     if not res['success']:
         print(f"Could not create admin: {res['message']}")
         return
