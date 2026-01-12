@@ -110,3 +110,11 @@ class DBManager():
         self.exec_no_commit(query, all_params, db_conn)
         
         return glvars.ReturnMessage(True, 'Edited row(s)').send()
+    
+
+    def rollback(self, db_conn):
+        if not isinstance(db_conn, sqlite3.Connection):
+            return glvars.ReturnMessage(False, 'Provide a db connection!').send()
+        
+        db_conn.rollback()
+        return glvars.ReturnMessage(True, 'Rolled back changes!').send()

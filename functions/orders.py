@@ -59,6 +59,7 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         """Return the Data"""
@@ -108,6 +109,7 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         """Return the Data"""
@@ -144,6 +146,7 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Could not commit: {commit_res['message']}"
             ).send()
@@ -186,13 +189,16 @@ class OrderManager:
 
             user.remove_set_item("tickets_ordered", ticket.code)
             user.add_set_item("tickets_bought", ticket.code)
-        self.db_man.commit(db_conn)
+        # self.db_man.commit(db_conn)
 
         cart.turn_to_order()
         order_id = cart.id
         # SAVE TO DB
-        if not self.save_to_db(user_session, cart.to_dict())["success"]:
+        if not self.save_to_db(user_session, cart.to_dict(), db_conn)["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(False, "Could not save to DB.").send()
+        
+        self.db_man.commit(db_conn)
 
         return glvars.ReturnData(
             True,
@@ -239,6 +245,7 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         return glvars.ReturnMessage(True, "Order confirmed to be bought!").send()
@@ -276,12 +283,14 @@ class OrderManager:
         )
 
         if not order_del["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Could not cancel the order: {order_del['message']}"
             ).send()
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Could not cancel the order: {commit_res['message']}"
             ).send()
@@ -328,11 +337,13 @@ class OrderManager:
             db_conn,
         )
         if response["success"] == False:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(False, response["message"]).send()
 
         if not given_db_conn:
             commit_res = self.db_man.commit(db_conn)
             if not commit_res["success"]:
+                self.db_man.rollback(db_conn)
                 return glvars.ReturnMessage(False, commit_res["message"]).send()
 
         return glvars.ReturnMessage(True, "Successfully saved to the database").send()
@@ -349,10 +360,12 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Could not commit data: {commit_res['message']}"
             ).send()
         if not response["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Something went wrong: {response['message']}"
             )
@@ -392,6 +405,7 @@ class OrderManager:
 
         commit_res = self.db_man.commit(db_conn)
         if not commit_res["success"]:
+            self.db_man.rollback(db_conn)
             return glvars.ReturnMessage(
                 False, f"Could not commit: {commit_res['message']}"
             ).send()
