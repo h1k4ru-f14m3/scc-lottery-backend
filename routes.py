@@ -85,7 +85,7 @@ def index():
 
 @app.route("/version")
 def version():
-    return glvars.ReturnMessage(True, "Backend: v.0.2.1").response()
+    return glvars.ReturnMessage(True, "Backend: v.0.3.1").response()
 
 
 @app.route("/search")
@@ -151,6 +151,34 @@ def is_admin():
         return glvars.ReturnMessage(False, "You are not an admin!").response()
 
     return glvars.ReturnMessage(True, "You are an admin!").response()
+
+
+@app.route("/changepfp", methods=["POST"])
+def change_pfp():
+    data = request.get_json()
+    pfp = data.get('pfp') or None
+    user = session.get("user_info")
+    db_conn = db_man.get_conn()
+    if not pfp:
+        return glvars.ReturnMessage(False, "No picture provided!").response()
+    if not user:
+        return glvars.ReturnMessage(False, "You are not logged in!").response()
+    
+    user['pfp'] = pfp
+    session['user_info']['pfp'] = pfp
+    edit_user = users_man.edit_user(user['id'], ['pfp',], [pfp,], db_conn)
+    if not edit_user['success']:
+        return glvars.ReturnMessage(False, f"Something went wrong! - {edit_user['message']}").response()
+    
+    commit = db_man.commit(db_conn)
+    if not commit['success']:
+        return glvars.ReturnMessage(False, f"Something went wrong while committing - {commit['message']}").response()
+    
+    return glvars.ReturnMessage(True, "Changed pfp!").response()
+    
+
+    
+    
 
 
 ###############
