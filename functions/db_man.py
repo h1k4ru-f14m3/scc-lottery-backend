@@ -1,5 +1,6 @@
 import functions.global_vars as glvars
 import sqlite3
+from flask import g
 from collections.abc import Iterable
 
 class DBManager():
@@ -8,7 +9,9 @@ class DBManager():
 
 
     def get_conn(self):
-        return sqlite3.connect(self.db_path)
+        if '_database' not in g:
+            g._database = sqlite3.connect(self.db_path, timeout=20)
+        return g._database
 
 
     # Params must be a tuple

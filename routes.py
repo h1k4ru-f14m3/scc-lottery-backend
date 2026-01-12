@@ -1,4 +1,4 @@
-from flask import Blueprint, Flask, request, session
+from flask import Blueprint, Flask, request, session, g
 from flask_caching import Cache
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -705,3 +705,10 @@ app.register_blueprint(cart_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(tickets_bp)
+
+
+@app.teardown_appcontext
+def close_connections(exception):
+    db_conn = getattr(g, '_database', None)
+    if db_conn is not None:
+        db_conn.close()
