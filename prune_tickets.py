@@ -26,7 +26,8 @@ def prune_ghost_orders():
     for row in ghost_orders:
         res = db_man.delete_row(glvars.orders_table, 'id', str(row[0]), db_conn)
         logger.info(f"SUCCESS: {res['success']} - MESSAGE: {res['message']}")
-        logger.info(f"DELETE ORDER {row[0]} - TICKETS_BOUGHT: {row[1]}\n")
+        logger.info(f"DELETE ORDER {row[0]} - TICKETS_BOUGHT: {row[1]}")
+        logger.info(f"ORDER {row[0]} - {row}")
 
     commit_res = db_man.commit(db_conn)
     logger.info(f"COMMIT: SUCCESS - {commit_res['success']} : {commit_res['message']}")
@@ -93,7 +94,7 @@ def prune_tickets():
     commit_res = db_man.commit(db_conn)
     logger.info(f"COMMIT - {commit_res['success']}: {commit_res['message']}")
 
-    logger.info('\n Successfully pruned expired tickets! \n')
+    logger.info('\n Successfully pruned expired \tickets! \n')
 
 
 def loop():
