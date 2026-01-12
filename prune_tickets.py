@@ -1,4 +1,5 @@
 from functions.db_man import DBManager
+from routes import app
 from functions.tickets import Ticket
 from functions.cart import Cart
 import functions.global_vars as glvars
@@ -103,7 +104,11 @@ def loop():
         time.sleep(3600)
 
 if __name__ == '__main__':
+    with app.app_context():
+        try:
+            logger.info("Start Prune!")
     # loop()
-    prune_tickets()
-    prune_ghost_orders()
-    
+            prune_tickets()
+            prune_ghost_orders()
+        except Exception as e:
+            logger.error(f"Prune failed: {e}")
